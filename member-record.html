@@ -46,6 +46,7 @@
                 <option value="2025">2025</option>
                 <option value="2024">2024</option>
               </select>
+              <button type="button" class="btn btn-secondary" id="printReceipt">Print Receipt</button>
               <button type="button" class="btn btn-primary print-record-button" id="printRecord">Print Record</button>
             </div>
           </div>
@@ -146,6 +147,109 @@
 
         yearSelect.addEventListener('change', renderRecord);
         document.getElementById('printRecord').addEventListener('click', () => window.print());
+
+        document.getElementById('printReceipt').addEventListener('click', () => {
+          const year = Number(yearSelect.value);
+          const settings = (data.monthlyDueSettings || []).find((item) => Number(item.year) === year) || data.monthlyDue || {};
+          const monthlyAmount = Number(settings.monthly_amount || 5);
+          const yearlyDue = Number(settings.yearly_due || monthlyAmount * 12);
+          const monthlyPayments = data.monthlyPayments.filter((payment) =>
+            Number(payment.member_id) === memberId && Number(payment.year) === year
+          );
+          const totalYearPaid = monthlyPayments
+            .filter((payment) => payment.paid)
+            .reduce((sum, payment) => sum + Number(payment.amount || monthlyAmount), 0);
+          const totalYearUnpaid = Math.max(yearlyDue - totalYearPaid, 0);
+          const fees = data.additionalFees.filter((fee) => Number(fee.year) === year).map((fee) => {
+            const payment = data.additionalFeePayments.find((entry) =>
+              Number(entry.member_id) === memberId && entry.fee_id === fee.id && Number(entry.year) === year
+            );
+            const amount = Number(payment?.amount || fee.amount || 0);
+            return { name: fee.name, amount, paid: payment?.paid === true };
+          });
+          const totalAdditionalFees = fees.reduce((sum, fee) => sum + fee.amount, 0);
+          const additionalFeesPaid = fees.filter((fee) => fee.paid).reduce((sum, fee) => sum + fee.amount, 0);
+          const additionalFeesUnpaid = totalAdditionalFees - additionalFeesPaid;
+          const currentUser = window.TRMSAuth.getCurrentUser();
+          const adminProfile = data.profiles.find((profile) => profile.id === currentUser?.id && profile.role === 'admin');
+          const zoneTreasurer = data.profiles.find((profile) =>
+            profile.role === 'zone_treasurer' && Number(profile.zone_id) === Number(zoneId)
+          );
+          const datePrinted = new Date().toLocaleDateString('en-PH', {
+            year: 'numeric', month: 'long', day: 'numeric'
+          });
+          const receiptWindow = window.open('', '_blank', 'width=900,height=700');
+
+          if (!receiptWindow) {
+            alert('Popup blocked. Please allow pop-ups to print the receipt.');
+            return;
+          }
+
+          receiptWindow.document.write(`
+            <html>
+              <head>
+                <title>Membership Payment Receipt</title>
+                <style>
+                  body { font-family: Arial, sans-serif; padding: 36px; color: #1b241f; }
+                  h1 { text-align: center; margin-bottom: 28px; }
+                  h2 { margin: 26px 0 10px; font-size: 18px; }
+                  .details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
+                  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                  th, td { border: 1px solid #c7bea5; padding: 9px; text-align: left; }
+                  .totals { margin-top: 18px; font-size: 16px; }
+                  .signatures { display: flex; justify-content: space-between; gap: 60px; margin-top: 48px; }
+                  .signature { width: 220px; text-align: center; }
+                  .signature-line { border-top: 1px solid #1b241f; margin-bottom: 8px; }
+                  .signature-name { font-weight: 600; }
+                  .signature-role { margin-top: 4px; }
+                  .date { margin-top: 28px; }
+                </style>
+              </head>
+              <body>
+                <h1>MEMBERSHIP PAYMENT RECEIPT</h1>
+                <div class="details">
+                  <div><strong>Member Name:</strong> ${member.name}</div>
+                  <div><strong>Zone:</strong> ${zone ? zone.name : 'Unknown'}</div>
+                  <div><strong>Year:</strong> ${year}</div>
+                </div>
+
+                <h2>MONTHLY DUES</h2>
+                <table>
+                  <thead><tr><th>Yearly Due</th><th>Total Year Paid</th><th>Total Year Unpaid</th></tr></thead>
+                  <tbody><tr><td>${window.TRMSUtils.formatMoneyShort(yearlyDue)}</td><td>${window.TRMSUtils.formatMoneyShort(totalYearPaid)}</td><td>${window.TRMSUtils.formatMoneyShort(totalYearUnpaid)}</td></tr></tbody>
+                </table>
+
+                <h2>ADDITIONAL FEES</h2>
+                <table>
+                  <thead><tr><th>Fee Name</th><th>Amount</th><th>Paid/Unpaid</th></tr></thead>
+                  <tbody>
+                    ${fees.length ? fees.map((fee) => `<tr><td>${fee.name}</td><td>${window.TRMSUtils.formatMoneyShort(fee.amount)}</td><td>${fee.paid ? 'Paid' : 'Unpaid'}</td></tr>`).join('') : '<tr><td colspan="3">No additional fees</td></tr>'}
+                  </tbody>
+                </table>
+                <div class="totals">
+                  <p><strong>Total Additional Fees:</strong> ${window.TRMSUtils.formatMoneyShort(totalAdditionalFees)}</p>
+                  <p><strong>Additional Fees Paid:</strong> ${window.TRMSUtils.formatMoneyShort(additionalFeesPaid)}</p>
+                  <p><strong>Additional Fees Unpaid:</strong> ${window.TRMSUtils.formatMoneyShort(additionalFeesUnpaid)}</p>
+                </div>
+
+                <div class="totals">
+                  <p><strong>TOTAL PAID:</strong> ${window.TRMSUtils.formatMoneyShort(totalYearPaid + additionalFeesPaid)}</p>
+                  <p><strong>TOTAL UNPAID:</strong> ${window.TRMSUtils.formatMoneyShort(totalYearUnpaid + additionalFeesUnpaid)}</p>
+                </div>
+
+                <div class="signatures">
+                  <div class="signature"><div class="signature-line"></div><div class="signature-name">${zoneTreasurer?.name || 'Zone Treasurer'}</div><div class="signature-role">Zone Treasurer</div></div>
+                  <div class="signature"><div class="signature-line"></div><div class="signature-name">${adminProfile?.name || currentUser?.name || 'Head Treasurer'}</div><div class="signature-role">Head Treasurer</div></div>
+                </div>
+                <p class="date"><strong>Date Printed:</strong> ${datePrinted}</p>
+              </body>
+            </html>
+          `);
+          receiptWindow.document.close();
+          receiptWindow.focus();
+          receiptWindow.print();
+        });
+
         renderRecord();
       });
     </script>
