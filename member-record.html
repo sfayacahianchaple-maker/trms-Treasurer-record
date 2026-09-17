@@ -46,8 +46,7 @@
                 <option value="2025">2025</option>
                 <option value="2024">2024</option>
               </select>
-              <button type="button" class="btn btn-secondary" id="printReceipt">Print Receipt</button>
-              <button type="button" class="btn btn-primary print-record-button" id="printRecord">Print Record</button>
+              <button type="button" class="btn btn-primary print-record-button" id="printReceipt">Print Receipt</button>
             </div>
           </div>
         </div>
@@ -146,8 +145,6 @@
         }
 
         yearSelect.addEventListener('change', renderRecord);
-        document.getElementById('printRecord').addEventListener('click', () => window.print());
-
         document.getElementById('printReceipt').addEventListener('click', () => {
           const year = Number(yearSelect.value);
           const settings = (data.monthlyDueSettings || []).find((item) => Number(item.year) === year) || data.monthlyDue || {};
