@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zone Treasurers</title>
+    <link rel="stylesheet" href="css/style.css?v=20260917-4" />
+  </head>
+  <body data-role="admin" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Head Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="nav-list">
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a href="zones.html">Zone List</a></li>
+          <li><a href="create-zone.html">Create Zone</a></li>
+          <li><a href="members.html">Members</a></li>
+          <li><a class="active" href="treasurers.html">Zone Treasurers</a></li>
+          <li><a href="monthly-due.html">Monthly Due</a></li>
+          <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="payment-records.html">Payment Records</a></li>
+          <li><a href="reports.html">Reports</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header">
+          <h1>Zone Treasurers</h1>
+        </div>
+
+        <section class="card card-spaced-bottom">
+          <h2>Create Zone Treasurer</h2>
+          <form id="createTreasurerForm" class="form-grid">
+            <div class="form-control">
+              <label for="treasurerName">Full Name</label>
+              <input id="treasurerName" type="text" placeholder="Juan Dela Cruz" required />
+            </div>
+            <div class="form-control">
+              <label for="treasurerEmail">Email</label>
+              <input id="treasurerEmail" type="email" placeholder="juan@gmail.com" required />
+            </div>
+            <div class="form-control">
+              <label for="treasurerUsername">Username</label>
+              <input id="treasurerUsername" type="text" placeholder="zone1treasurer" required />
+            </div>
+            <div class="form-control">
+              <label for="treasurerPassword">Password</label>
+              <input id="treasurerPassword" type="password" placeholder="********" required />
+            </div>
+            <div class="form-control">
+              <label for="treasurerConfirmPassword">Confirm Password</label>
+              <input id="treasurerConfirmPassword" type="password" placeholder="********" required />
+            </div>
+            <div class="form-control">
+              <label for="treasurerZone">Assigned Zone</label>
+              <select id="treasurerZone"></select>
+            </div>
+            <div class="form-control form-actions-end form-actions-full">
+              <button type="submit" class="btn btn-primary">Create Account</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Assigned Zone</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="treasurerTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="modal-overlay" id="editTreasurerModal" hidden>
+          <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="editTreasurerTitle">
+            <div class="page-header">
+              <div>
+                <p class="eyebrow">Account Management</p>
+                <h2 id="editTreasurerTitle">Edit Zone Treasurer</h2>
+              </div>
+              <button type="button" class="modal-close" id="closeEditTreasurer" aria-label="Close edit treasurer dialog">&times;</button>
+            </div>
+            <form id="editTreasurerForm" class="form-grid">
+              <div class="form-control">
+                <label for="editTreasurerName">Full Name</label>
+                <input id="editTreasurerName" type="text" required />
+              </div>
+              <div class="form-control">
+                <label for="editTreasurerUsername">Username</label>
+                <input id="editTreasurerUsername" type="text" required />
+              </div>
+              <div class="form-control">
+                <label for="editTreasurerZone">Assigned Zone</label>
+                <select id="editTreasurerZone"></select>
+              </div>
+              <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelEditTreasurer">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Treasurer</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260917-4"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+        const body = document.getElementById('treasurerTableBody');
+        const form = document.getElementById('createTreasurerForm');
+        const zoneSelect = document.getElementById('treasurerZone');
+        const editModal = document.getElementById('editTreasurerModal');
+        const editForm = document.getElementById('editTreasurerForm');
+        const editZoneSelect = document.getElementById('editTreasurerZone');
+        let editingTreasurerId = null;
+
+        function populateZones() {
+          const data = window.TRMSAuth.getMockData();
+          zoneSelect.innerHTML = data.zones.map((zone) => `<option value="${zone.id}">${zone.name}</option>`).join('');
+          editZoneSelect.innerHTML = data.zones.map((zone) => `<option value="${zone.id}">${zone.name}</option>`).join('');
+        }
+
+        function renderTreasurers() {
+          const data = window.TRMSAuth.getMockData();
+          body.innerHTML = data.profiles.filter((profile) => profile.role === 'zone_treasurer').map((profile) => {
+            const zone = data.zones.find((item) => Number(item.id) === Number(profile.zone_id));
+            return `
+              <tr>
+                <td>${profile.name}</td>
+                <td>${profile.email}</td>
+                <td>${zone ? zone.name : 'Unassigned'}</td>
+                <td>
+                  <div class="button-group">
+                    <button type="button" class="btn btn-secondary edit-treasurer-button" data-profile-id="${profile.id}">Edit</button>
+                    <button type="button" class="btn btn-danger delete-treasurer-button" data-profile-id="${profile.id}">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+        function closeEditModal() {
+          editingTreasurerId = null;
+          editForm.reset();
+          editModal.hidden = true;
+        }
+
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const data = window.TRMSAuth.getMockData();
+          const fullName = document.getElementById('treasurerName').value.trim();
+          const email = document.getElementById('treasurerEmail').value.trim().toLowerCase();
+          const username = document.getElementById('treasurerUsername').value.trim().toLowerCase();
+          const password = document.getElementById('treasurerPassword').value;
+          const confirmPassword = document.getElementById('treasurerConfirmPassword').value;
+          const zoneId = Number(zoneSelect.value);
+
+          if (!fullName || !email || !username || !password || !zoneId) {
+            alert('Please complete all fields.');
+            return;
+          }
+
+          if (password !== confirmPassword) {
+            alert('Passwords do not match.');
+            return;
+          }
+
+          const duplicate = data.profiles.some((profile) => profile.email === email || (profile.username || '').toLowerCase() === username);
+          if (duplicate) {
+            alert('A treasurer account with that email or username already exists.');
+            return;
+          }
+
+          const result = await window.TRMSAuth.createTreasurerAccount({
+            fullName,
+            email,
+            username,
+            password,
+            zoneId
+          });
+
+          if (!result.success) {
+            alert(result.message);
+            return;
+          }
+
+          form.reset();
+          renderTreasurers();
+          alert(result.requiresEmailConfirmation
+            ? 'Account created. The treasurer must confirm the email before signing in.'
+            : 'Account created successfully.');
+        });
+
+        editForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const result = await window.TRMSAuth.updateTreasurerProfile(editingTreasurerId, {
+            name: document.getElementById('editTreasurerName').value.trim(),
+            username: document.getElementById('editTreasurerUsername').value.trim().toLowerCase(),
+            zoneId: Number(editZoneSelect.value)
+          });
+
+          if (!result.success) {
+            alert(result.message);
+            return;
+          }
+
+          closeEditModal();
+          renderTreasurers();
+          alert('Treasurer profile updated successfully.');
+        });
+
+        document.getElementById('closeEditTreasurer').addEventListener('click', closeEditModal);
+        document.getElementById('cancelEditTreasurer').addEventListener('click', closeEditModal);
+        editModal.addEventListener('click', (event) => {
+          if (event.target === editModal) closeEditModal();
+        });
+
+        body.addEventListener('click', async (event) => {
+          const editButton = event.target.closest('.edit-treasurer-button');
+          const deleteButton = event.target.closest('.delete-treasurer-button');
+          const data = window.TRMSAuth.getMockData();
+
+          if (editButton) {
+            const profile = data.profiles.find((item) => item.id === editButton.dataset.profileId);
+            if (!profile) return;
+
+            editingTreasurerId = profile.id;
+            document.getElementById('editTreasurerName').value = profile.name || '';
+            document.getElementById('editTreasurerUsername').value = profile.username || '';
+            editZoneSelect.value = String(profile.zone_id || '');
+            editModal.hidden = false;
+            document.getElementById('editTreasurerName').focus();
+            return;
+          }
+
+          if (deleteButton) {
+            const profileId = deleteButton.dataset.profileId;
+            const profile = data.profiles.find((item) => item.id === profileId);
+            if (!profile || !confirm(`Remove ${profile.name} from Zone Treasurers?`)) return;
+
+            const result = await window.TRMSAuth.deleteTreasurerProfile(profileId);
+            if (!result.success) {
+              alert(result.message);
+              return;
+            }
+
+            renderTreasurers();
+            alert('Treasurer profile removed. The Auth user still exists and can be deleted from Supabase Auth if needed.');
+          }
+        });
+
+        populateZones();
+        renderTreasurers();
+      });
+    </script>
+  </body>
+</html>

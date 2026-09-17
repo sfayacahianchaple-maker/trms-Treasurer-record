@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Member Record</title>
+    <link rel="stylesheet" href="css/style.css?v=20260916-6" />
+  </head>
+  <body data-role="admin" class="app-shell record-page">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Head Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="nav-list">
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a class="active" href="zones.html">Zone List</a></li>
+          <li><a href="create-zone.html">Create Zone</a></li>
+          <li><a href="members.html">Members</a></li>
+          <li><a href="treasurers.html">Zone Treasurers</a></li>
+          <li><a href="monthly-due.html">Monthly Due</a></li>
+          <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="payment-records.html">Payment Records</a></li>
+          <li><a href="reports.html">Reports</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header page-header--split">
+          <div>
+            <p class="eyebrow record-label">Member Record</p>
+            <h1 id="memberName">Member</h1>
+            <p id="memberMeta">-</p>
+          </div>
+          <div class="record-actions no-print">
+            <a href="zones.html" class="btn btn-secondary">Back to Zone List</a>
+            <div class="record-filters">
+              <label for="recordYear">Year</label>
+              <select id="recordYear">
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+              </select>
+              <button type="button" class="btn btn-primary print-record-button" id="printRecord">Print Record</button>
+            </div>
+          </div>
+        </div>
+
+        <section class="card record-block">
+          <h2>Monthly Due</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="monthlyRecordBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card record-block card-spaced-top">
+          <h2>Additional Fees</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fee</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="additionalRecordBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260917-3"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+
+        const params = new URLSearchParams(window.location.search);
+        const memberId = Number(params.get('memberId'));
+        const zoneId = Number(params.get('zoneId') || 1);
+        const yearSelect = document.getElementById('recordYear');
+        const requestedYear = Number(params.get('year')) || new Date().getFullYear();
+        const data = window.TRMSAuth.getMockData();
+        const member = data.members.find((item) => Number(item.id) === memberId);
+        const zone = data.zones.find((item) => Number(item.id) === zoneId);
+
+        if (!member) {
+          document.getElementById('memberName').textContent = 'Member record not found';
+          return;
+        }
+
+        yearSelect.value = String(requestedYear);
+        document.getElementById('memberName').textContent = member.name;
+        document.getElementById('memberMeta').textContent = `${zone ? zone.name : 'Zone'} - ${member.address || 'No address provided'} - ${member.phone || 'No phone number'}`;
+
+        function renderRecord() {
+          const year = Number(yearSelect.value);
+          const monthly = data.monthlyPayments.filter((payment) =>
+            Number(payment.member_id) === memberId && Number(payment.year) === year
+          );
+          const additional = data.additionalFeePayments.filter((payment) =>
+            Number(payment.member_id) === memberId && Number(payment.year) === year
+          );
+
+          document.getElementById('monthlyRecordBody').innerHTML = monthly.length
+            ? monthly.map((payment) => `
+                <tr>
+                  <td>${payment.month}</td>
+                  <td>${window.TRMSUtils.formatMoneyShort(payment.amount || 0)}</td>
+                  <td><span class="status ${payment.paid ? 'active' : 'inactive'}">${payment.paid ? 'Paid' : 'Unpaid'}</span></td>
+                </tr>
+              `).join('')
+            : '<tr><td colspan="3">No monthly due records found.</td></tr>';
+
+          document.getElementById('additionalRecordBody').innerHTML = additional.length
+            ? additional.map((payment) => {
+                const fee = data.additionalFees.find((item) => item.id === payment.fee_id);
+                return `
+                  <tr>
+                    <td>${fee ? fee.name : 'Additional Fee'}</td>
+                    <td>${window.TRMSUtils.formatMoneyShort(payment.amount || 0)}</td>
+                    <td><span class="status ${payment.paid ? 'active' : 'inactive'}">${payment.paid ? 'Paid' : 'Unpaid'}</span></td>
+                  </tr>
+                `;
+              }).join('')
+            : '<tr><td colspan="3">No additional fee records found.</td></tr>';
+        }
+
+        yearSelect.addEventListener('change', renderRecord);
+        document.getElementById('printRecord').addEventListener('click', () => window.print());
+        renderRecord();
+      });
+    </script>
+  </body>
+</html>

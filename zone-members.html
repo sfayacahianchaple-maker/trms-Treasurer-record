@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zone Members</title>
+    <link rel="stylesheet" href="css/style.css?v=20260917-4" />
+  </head>
+  <body data-role="admin" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Head Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="nav-list">
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a class="active" href="zones.html">Zone List</a></li>
+          <li><a href="create-zone.html">Create Zone</a></li>
+          <li><a href="members.html">Members</a></li>
+          <li><a href="treasurers.html">Zone Treasurers</a></li>
+          <li><a href="monthly-due.html">Monthly Due</a></li>
+          <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="payment-records.html">Payment Records</a></li>
+          <li><a href="reports.html">Reports</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header">
+          <h1 id="zoneTitle">Zone</h1>
+        </div>
+
+        <div class="zone-member-search" role="search">
+          <label for="memberSearch">Find a member</label>
+          <input id="memberSearch" type="search" placeholder="Search by member name" autocomplete="off" />
+        </div>
+
+        <section class="card">
+          <div class="zone-header">
+            <div>
+              <p><strong>Zone Treasurer:</strong> <span id="zoneTreasurerName">-</span></p>
+              <p><strong>Total Members:</strong> <span id="totalMembers"></span></p>
+              <p><strong>Active Members:</strong> <span id="activeMembers"></span></p>
+              <p><strong>Inactive Members:</strong> <span id="inactiveMembers"></span></p>
+            </div>
+            <div class="inline-controls">
+              <label for="zoneYearSelect">Year</label>
+              <select id="zoneYearSelect">
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Member</th>
+                  <th>Status</th>
+                  <th>Total Paid</th>
+                  <th>Total Unpaid</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="zoneMembersBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card record-panel" id="memberRecordPanel" hidden>
+          <div class="zone-header page-header--split">
+            <div>
+              <p class="eyebrow">Member Record</p>
+              <h2 id="recordMemberName">Member Record</h2>
+              <p id="recordMemberMeta">-</p>
+            </div>
+            <button type="button" class="btn btn-primary" id="printMemberRecordBtn">Print Record</button>
+          </div>
+
+          <div class="record-grid">
+            <div class="record-block">
+              <h3>Monthly Due</h3>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="monthlyRecordBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="record-block">
+              <h3>Additional Fees</h3>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Fee</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="additionalRecordBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260917-8"></script>
+    <script src="js/utils.js?v=20260917-4"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+        const zoneId = Number(window.TRMSUtils.getQueryParam('zoneId') || 1);
+        const data = window.TRMSAuth.getMockData();
+        const zone = data.zones.find((item) => Number(item.id) === zoneId) || data.zones[0];
+        const members = data.members.filter((member) => Number(member.zone_id) === Number(zone.id));
+        const treasurer = data.profiles.find((profile) => Number(profile.zone_id) === Number(zone.id) && profile.role === 'zone_treasurer');
+        const yearSelect = document.getElementById('zoneYearSelect');
+
+        document.getElementById('zoneTitle').textContent = zone.name;
+        document.getElementById('zoneTreasurerName').textContent = treasurer ? treasurer.name : 'Unassigned';
+        document.getElementById('totalMembers').textContent = members.length;
+        document.getElementById('activeMembers').textContent = members.filter((member) => member.is_active).length;
+        document.getElementById('inactiveMembers').textContent = members.filter((member) => !member.is_active).length;
+
+        const tableBody = document.getElementById('zoneMembersBody');
+        const recordPanel = document.getElementById('memberRecordPanel');
+        const recordMemberName = document.getElementById('recordMemberName');
+        const recordMemberMeta = document.getElementById('recordMemberMeta');
+        const monthlyRecordBody = document.getElementById('monthlyRecordBody');
+        const additionalRecordBody = document.getElementById('additionalRecordBody');
+        const memberSearch = document.getElementById('memberSearch');
+
+        function renderMemberRecord(memberId) {
+          const selectedMember = data.members.find((member) => Number(member.id) === Number(memberId));
+          if (!selectedMember) return;
+
+          const year = Number(yearSelect.value);
+          const monthly = data.monthlyPayments.filter((payment) =>
+            Number(payment.member_id) === Number(selectedMember.id) && Number(payment.year) === year
+          );
+          const additionalFees = data.additionalFeePayments.filter((payment) =>
+            Number(payment.member_id) === Number(selectedMember.id) && Number(payment.year) === year
+          );
+
+          recordMemberName.textContent = `${selectedMember.name}`;
+          recordMemberMeta.textContent = `${selectedMember.address || 'No address provided'} • ${selectedMember.phone || 'No phone number'}`;
+          recordPanel.hidden = false;
+
+          monthlyRecordBody.innerHTML = monthly.length
+            ? monthly.map((payment) => `
+                <tr>
+                  <td>${payment.month}</td>
+                  <td>${window.TRMSUtils.formatMoneyShort(payment.amount || 0)}</td>
+                  <td><span class="status ${payment.paid ? 'active' : 'inactive'}">${payment.paid ? 'Paid' : 'Unpaid'}</span></td>
+                </tr>
+              `).join('')
+            : '<tr><td colspan="3">No monthly due records found.</td></tr>';
+
+          additionalRecordBody.innerHTML = additionalFees.length
+            ? additionalFees.map((payment) => {
+                const fee = data.additionalFees.find((item) => item.id === payment.fee_id);
+                return `
+                  <tr>
+                    <td>${fee ? fee.name : 'Additional Fee'}</td>
+                    <td>${window.TRMSUtils.formatMoneyShort(payment.amount || 0)}</td>
+                    <td><span class="status ${payment.paid ? 'active' : 'inactive'}">${payment.paid ? 'Paid' : 'Unpaid'}</span></td>
+                  </tr>
+                `;
+              }).join('')
+            : '<tr><td colspan="3">No additional fee records found.</td></tr>';
+        }
+
+        function renderMembers() {
+          const year = Number(yearSelect.value);
+          const query = memberSearch.value.trim().toLowerCase();
+          const filteredMembers = members.filter((member) => member.name.toLowerCase().includes(query));
+
+          tableBody.innerHTML = filteredMembers.map((member, index) => {
+            const status = window.TRMSUtils.calculateMemberStatus(member.id, year);
+            const totalPaid = data.monthlyPayments
+              .filter((payment) => Number(payment.member_id) === Number(member.id) && Number(payment.year) === year && payment.paid)
+              .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+            const totalUnpaid = data.monthlyPayments
+              .filter((payment) => Number(payment.member_id) === Number(member.id) && Number(payment.year) === year && !payment.paid)
+              .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
+            return `
+              <tr>
+                <td>${index + 1}</td>
+                <td>${member.name}</td>
+                <td><span class="${status.className}">${status.label}</span></td>
+                <td>${window.TRMSUtils.formatMoneyShort(totalPaid)}</td>
+                <td>${window.TRMSUtils.formatMoneyShort(totalUnpaid)}</td>
+                <td><a class="btn btn-secondary" href="member-record.html?memberId=${member.id}&zoneId=${zoneId}&year=${year}">View Record</a></td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+        yearSelect.addEventListener('change', () => {
+          renderMembers();
+        });
+
+        memberSearch.addEventListener('input', renderMembers);
+
+        renderMembers();
+      });
+    </script>
+  </body>
+</html>

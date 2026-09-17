@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body data-role="admin" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Head Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="nav-list">
+          <li><a class="active" href="admin-dashboard.html">Dashboard</a></li>
+          <li><a href="zones.html">Zone List</a></li>
+          <li><a href="create-zone.html">Create Zone</a></li>
+          <li><a href="members.html">Members</a></li>
+          <li><a href="treasurers.html">Zone Treasurers</a></li>
+          <li><a href="monthly-due.html">Monthly Due</a></li>
+          <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="payment-records.html">Payment Records</a></li>
+          <li><a href="reports.html">Reports</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header">
+          <h1>Admin Dashboard</h1>
+        </div>
+
+        <section class="grid metrics-grid" id="dashboardMetrics"></section>
+
+        <section class="card card-spaced-top">
+          <h2>Zone Summary</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Zone</th>
+                  <th>Treasure</th>
+                  <th>Members</th>
+                  <th>Active</th>
+                  <th>Inactive</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="zoneSummaryTable"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260917-3"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+        const metrics = document.getElementById('dashboardMetrics');
+        const summaryTable = document.getElementById('zoneSummaryTable');
+        const data = window.TRMSAuth.getMockData();
+
+        const totalZones = data.zones.length;
+        const totalMembers = data.members.length;
+        const activeMembers = data.members.filter((member) => member.is_active).length;
+        const inactiveMembers = data.members.filter((member) => !member.is_active).length;
+        const totalPaid = data.monthlyPayments.filter((payment) => payment.paid).length * (data.monthlyDue.monthly_amount || 5);
+        const totalUnpaid = (data.monthlyPayments.filter((payment) => !payment.paid).length * (data.monthlyDue.monthly_amount || 5));
+
+        const cards = [
+          { label: 'Total Zones', value: totalZones },
+          { label: 'Total Members', value: totalMembers },
+          { label: 'Active', value: activeMembers },
+          { label: 'Inactive', value: inactiveMembers },
+          { label: 'Total Paid', value: window.TRMSUtils.formatMoneyShort(totalPaid) },
+          { label: 'Total Unpaid', value: window.TRMSUtils.formatMoneyShort(totalUnpaid) }
+        ];
+
+        metrics.innerHTML = cards.map((card) => `
+          <article class="card metric-card">
+            <span class="label">${card.label}</span>
+            <span class="value">${card.value}</span>
+          </article>
+        `).join('');
+
+        summaryTable.innerHTML = data.zones.map((zone) => {
+          const zoneMembers = data.members.filter((member) => Number(member.zone_id) === Number(zone.id));
+          const zoneTreasurer = data.profiles.find((profile) => Number(profile.zone_id) === Number(zone.id) && profile.role === 'zone_treasurer');
+          return `
+            <tr>
+              <td>${zone.name}</td>
+              <td>${zoneTreasurer ? zoneTreasurer.name : 'Unassigned'}</td>
+              <td>${zoneMembers.length}</td>
+              <td>${zoneMembers.filter((member) => member.is_active).length}</td>
+              <td>${zoneMembers.filter((member) => !member.is_active).length}</td>
+              <td><a href="zone-members.html?zoneId=${zone.id}" class="btn btn-secondary">View Record</a></td>
+            </tr>
+          `;
+        }).join('');
+      });
+    </script>
+  </body>
+</html>

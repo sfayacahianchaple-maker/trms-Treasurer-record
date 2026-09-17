@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payment Records</title>
+    <link rel="stylesheet" href="css/style.css?v=20260917-2" />
+  </head>
+  <body data-role="admin" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Head Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="nav-list">
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a href="zones.html">Zone List</a></li>
+          <li><a href="create-zone.html">Create Zone</a></li>
+          <li><a href="members.html">Members</a></li>
+          <li><a href="monthly-due.html">Monthly Due</a></li>
+          <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a class="active" href="payment-records.html">Payment Records</a></li>
+          <li><a href="reports.html">Reports</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header page-header--split">
+          <div>
+            <p class="eyebrow">Monitoring</p>
+            <h1>Payment Records</h1>
+          </div>
+          <div class="header-pill">View only</div>
+        </div>
+
+        <section class="card card-spaced-bottom">
+          <div class="form-grid">
+            <div class="form-control">
+              <label for="recordYear">Year</label>
+              <select id="recordYear">
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+              </select>
+            </div>
+            <div class="form-control">
+              <label for="recordZone">Zone</label>
+              <select id="recordZone">
+                <option value="all">All Zones</option>
+              </select>
+            </div>
+            <div class="form-control">
+              <label for="recordMember">Member</label>
+              <select id="recordMember">
+                <option value="all">All Members</option>
+              </select>
+            </div>
+            <div class="form-control">
+              <label for="recordMonth">Month</label>
+              <select id="recordMonth">
+                <option value="all">All Months</option>
+                <option value="Jan">Jan</option>
+                <option value="Feb">Feb</option>
+                <option value="Mar">Mar</option>
+                <option value="Apr">Apr</option>
+                <option value="May">May</option>
+                <option value="Jun">Jun</option>
+                <option value="Jul">Jul</option>
+                <option value="Aug">Aug</option>
+                <option value="Sep">Sep</option>
+                <option value="Oct">Oct</option>
+                <option value="Nov">Nov</option>
+                <option value="Dec">Dec</option>
+              </select>
+            </div>
+            <div class="form-control">
+              <label for="recordFee">Additional Fee</label>
+              <select id="recordFee">
+                <option value="all">All Fees</option>
+              </select>
+            </div>
+          </div>
+
+        </section>
+
+        <section class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Member</th>
+                  <th>Zone</th>
+                  <th>Year</th>
+                  <th>Month</th>
+                  <th>Fee</th>
+                  <th>Status</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody id="paymentRecordsBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260917-3"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+        const data = window.TRMSAuth.getMockData();
+        const zoneSelect = document.getElementById('recordZone');
+        const memberSelect = document.getElementById('recordMember');
+        const feeSelect = document.getElementById('recordFee');
+        const yearSelect = document.getElementById('recordYear');
+        const monthSelect = document.getElementById('recordMonth');
+        const body = document.getElementById('paymentRecordsBody');
+
+        zoneSelect.innerHTML = ['<option value="all">All Zones</option>']
+          .concat(data.zones.map((zone) => `<option value="${zone.id}">${zone.name}</option>`))
+          .join('');
+
+        memberSelect.innerHTML = ['<option value="all">All Members</option>']
+          .concat(data.members.map((member) => `<option value="${member.id}">${member.name}</option>`))
+          .join('');
+
+        feeSelect.innerHTML = ['<option value="all">All Fees</option>']
+          .concat(data.additionalFees.map((fee) => `<option value="${fee.id}">${fee.name} (${fee.year})</option>`))
+          .join('');
+
+        function renderRecords() {
+          const selectedYear = Number(yearSelect.value);
+          const selectedZone = zoneSelect.value;
+          const selectedMember = memberSelect.value;
+          const selectedMonth = monthSelect.value;
+          const selectedFee = feeSelect.value;
+
+          const rows = [];
+
+          data.monthlyPayments.forEach((payment) => {
+            if (Number(payment.year) !== selectedYear) return;
+            if (selectedMonth !== 'all' && payment.month !== selectedMonth) return;
+
+            const member = data.members.find((item) => Number(item.id) === Number(payment.member_id));
+            if (!member) return;
+            if (selectedMember !== 'all' && Number(member.id) !== Number(selectedMember)) return;
+            if (selectedZone !== 'all' && Number(member.zone_id) !== Number(selectedZone)) return;
+
+            rows.push({
+              type: 'Monthly Due',
+              member: member.name,
+              zone: data.zones.find((zone) => Number(zone.id) === Number(member.zone_id))?.name || 'Unknown',
+              year: payment.year,
+              month: payment.month,
+              fee: 'Monthly Due',
+              status: payment.paid ? 'Paid' : 'Unpaid',
+              amount: Number(payment.amount || 0),
+              paid: payment.paid
+            });
+          });
+
+          data.additionalFeePayments.forEach((payment) => {
+            if (Number(payment.year) !== selectedYear) return;
+            const member = data.members.find((item) => Number(item.id) === Number(payment.member_id));
+            if (!member) return;
+            if (selectedMember !== 'all' && Number(member.id) !== Number(selectedMember)) return;
+            if (selectedZone !== 'all' && Number(member.zone_id) !== Number(selectedZone)) return;
+            const fee = data.additionalFees.find((item) => item.id === payment.fee_id);
+            if (!fee) return;
+            if (selectedFee !== 'all' && payment.fee_id !== selectedFee) return;
+
+            rows.push({
+              type: 'Additional Fee',
+              member: member.name,
+              zone: data.zones.find((zone) => Number(zone.id) === Number(member.zone_id))?.name || 'Unknown',
+              year: payment.year,
+              month: '—',
+              fee: fee.name,
+              status: payment.paid ? 'Paid' : 'Unpaid',
+              amount: Number(payment.amount || 0),
+              paid: payment.paid
+            });
+          });
+
+          body.innerHTML = rows.map((row) => `
+            <tr>
+              <td>${row.member}</td>
+              <td>${row.zone}</td>
+              <td>${row.year}</td>
+              <td>${row.month}</td>
+              <td>${row.fee}</td>
+              <td><span class="status ${row.paid ? 'active' : 'inactive'}">${row.status}</span></td>
+              <td>${window.TRMSUtils.formatMoneyShort(row.amount)}</td>
+            </tr>
+          `).join('');
+        }
+
+        [yearSelect, zoneSelect, memberSelect, monthSelect, feeSelect].forEach((control) => {
+          control.addEventListener('change', renderRecords);
+        });
+
+        const printReceiptButton = document.getElementById('printReceiptBtn');
+        if (printReceiptButton) printReceiptButton.addEventListener('click', () => {
+          const memberId = memberSelect.value;
+          const year = Number(yearSelect.value);
+          const selectedMember = data.members.find((member) => Number(member.id) === Number(memberId));
+
+          if (!selectedMember) {
+            alert('Please select a member to print the official receipt.');
+            return;
+          }
+
+          const zone = data.zones.find((item) => Number(item.id) === Number(selectedMember.zone_id));
+          const currentDate = new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
+          const monthlyPaid = data.monthlyPayments.filter((payment) => Number(payment.member_id) === Number(selectedMember.id) && Number(payment.year) === year && payment.paid)
+            .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+          const monthlyUnpaid = data.monthlyPayments.filter((payment) => Number(payment.member_id) === Number(selectedMember.id) && Number(payment.year) === year && !payment.paid)
+            .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+          const feePaid = data.additionalFeePayments.filter((payment) => Number(payment.member_id) === Number(selectedMember.id) && Number(payment.year) === year && payment.paid)
+            .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+          const feeUnpaid = data.additionalFeePayments.filter((payment) => Number(payment.member_id) === Number(selectedMember.id) && Number(payment.year) === year && !payment.paid)
+            .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
+          const receiptWindow = window.open('', '_blank', 'width=900,height=700');
+          if (!receiptWindow) {
+            alert('Popup blocked. Please allow pop-ups to print the receipt.');
+            return;
+          }
+
+          receiptWindow.document.write(`
+            <html>
+              <head>
+                <title>Membership Payment Receipt</title>
+                <style>
+                  body { font-family: Arial, sans-serif; padding: 36px; color: #1c2430; }
+                  h1 { text-align: center; margin-bottom: 20px; }
+                  .section { margin-top: 26px; }
+                  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+                  th, td { border: 1px solid #dfe7f5; padding: 10px; text-align: left; }
+                  .signature { display: flex; justify-content: space-between; margin-top: 40px; }
+                  .line { border-top: 1px solid #333; width: 180px; margin-top: 40px; text-align: center; }
+                </style>
+              </head>
+              <body>
+                <h1>MEMBERSHIP PAYMENT RECEIPT</h1>
+                <p><strong>Member Name:</strong> ${selectedMember.name}</p>
+                <p><strong>Zone:</strong> ${zone ? zone.name : 'Unknown'}</p>
+                <p><strong>Year:</strong> ${year}</p>
+
+                <div class="section">
+                  <h3>MONTHLY DUES</h3>
+                  <table>
+                    <thead><tr><th>Year</th><th>Paid Amount</th><th>Unpaid Amount</th></tr></thead>
+                    <tbody>
+                      <tr><td>${year}</td><td>${window.TRMSUtils.formatMoneyShort(monthlyPaid)}</td><td>${window.TRMSUtils.formatMoneyShort(monthlyUnpaid)}</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="section">
+                  <h3>ADDITIONAL FEES</h3>
+                  <table>
+                    <thead><tr><th>Fee Name</th><th>Amount</th><th>Paid</th><th>Unpaid</th></tr></thead>
+                    <tbody>
+                      ${data.additionalFees.map((fee) => {
+                        const payment = data.additionalFeePayments.find((entry) => Number(entry.member_id) === Number(selectedMember.id) && entry.fee_id === fee.id && Number(entry.year) === year) || { paid: false, amount: fee.amount };
+                        const paid = payment.paid ? Number(payment.amount || 0) : 0;
+                        const unpaid = payment.paid ? 0 : Number(payment.amount || 0);
+                        return `<tr><td>${fee.name}</td><td>${window.TRMSUtils.formatMoneyShort(fee.amount)}</td><td>${window.TRMSUtils.formatMoneyShort(paid)}</td><td>${window.TRMSUtils.formatMoneyShort(unpaid)}</td></tr>`;
+                      }).join('')}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="section">
+                  <p><strong>TOTAL PAID:</strong> ${window.TRMSUtils.formatMoneyShort(monthlyPaid + feePaid)}</p>
+                  <p><strong>TOTAL UNPAID:</strong> ${window.TRMSUtils.formatMoneyShort(monthlyUnpaid + feeUnpaid)}</p>
+                </div>
+
+                <div class="signature">
+                  <div><div class="line">Zone Treasurer</div></div>
+                  <div><div class="line">Head Treasurer</div></div>
+                </div>
+
+                <p class="receipt-date"><strong>Date Printed:</strong> ${currentDate}</p>
+              </body>
+            </html>
+          `);
+          receiptWindow.document.close();
+          receiptWindow.focus();
+          receiptWindow.print();
+        });
+
+        renderRecords();
+      });
+    </script>
+  </body>
+</html>

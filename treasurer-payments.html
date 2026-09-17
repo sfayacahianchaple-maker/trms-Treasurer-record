@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payment Management</title>
+    <link rel="stylesheet" href="css/style.css?v=20260917-7" />
+  </head>
+  <body data-role="zone_treasurer" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Zone Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="nav-list">
+          <li><a href="treasurer-dashboard.html">Dashboard</a></li>
+          <li><a href="treasurer-members.html">My Members</a></li>
+          <li><a class="active" href="treasurer-payments.html">Payment Management</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header">
+          <h1>Payment Management</h1>
+        </div>
+
+        <section class="card">
+          <div class="zone-header">
+            <h2>Monthly Due</h2>
+            <div class="inline-controls">
+              <label for="yearSelect">Year</label>
+              <select id="yearSelect">
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="inline-controls payment-member-search">
+            <input id="memberSearch" type="search" placeholder="Search member..." />
+          </div>
+
+          <div class="table-wrap payment-table-wrap">
+            <table>
+              <thead id="paymentTableHead"></thead>
+              <tbody id="treasurerTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260917-8"></script>
+    <script src="js/utils.js?v=20260917-4"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+        const user = window.TRMSAuth.getCurrentUser();
+        const zoneId = user?.zone_id;
+        let data = window.TRMSAuth.getMockData();
+        const memberList = data.members.filter((member) => Number(member.zone_id) === Number(zoneId));
+        const yearSelect = document.getElementById('yearSelect');
+        const memberSearch = document.getElementById('memberSearch');
+        const tableBody = document.getElementById('treasurerTableBody');
+        const tableHead = document.getElementById('paymentTableHead');
+        const months = window.TRMSUtils.monthNames();
+
+        function renderHeader(year) {
+          const feeColumns = data.additionalFees.filter((fee) => Number(fee.year) === Number(year));
+          const feeHeaders = feeColumns.map((fee) => `
+            <th>
+              ${fee.name}<br>
+              <small>${window.TRMSUtils.formatMoneyShort(fee.amount)}</small>
+            </th>
+          `).join('');
+
+          tableHead.innerHTML = `
+            <tr>
+              <th>#</th>
+              <th>Member</th>
+              <th>Status</th>
+              ${months.map((month) => `<th>${month}</th>`).join('')}
+              ${feeHeaders || '<th>Fees</th>'}
+            </tr>
+          `;
+        }
+
+        function renderTable() {
+          const year = Number(yearSelect.value);
+          const query = memberSearch.value.trim().toLowerCase();
+          const filteredMembers = memberList.filter((member) => !query || member.name.toLowerCase().includes(query));
+          const feeColumns = data.additionalFees.filter((fee) => Number(fee.year) === Number(year));
+
+          renderHeader(year);
+
+          tableBody.innerHTML = filteredMembers.map((member, index) => {
+            const status = window.TRMSUtils.calculateMemberStatus(member.id, year);
+            const paidMonths = data.monthlyPayments.filter((payment) => Number(payment.member_id) === Number(member.id) && Number(payment.year) === year);
+            const monthlyCells = months.map((month) => {
+              const match = paidMonths.find((payment) => payment.month === month);
+              const checked = match?.paid === true;
+              return `<td class="checkbox-cell"><input type="checkbox" ${checked ? 'checked' : ''} aria-label="${member.name} ${month}" data-member-id="${member.id}" data-month="${month}" data-year="${year}" /></td>`;
+            }).join('');
+
+            const feeCells = feeColumns.length
+              ? feeColumns.map((fee) => {
+                  const feePayment = data.additionalFeePayments.find((payment) => Number(payment.member_id) === Number(member.id) && payment.fee_id === fee.id && Number(payment.year) === year);
+                  const isChecked = feePayment && feePayment.paid;
+                  return `<td class="checkbox-cell"><input type="checkbox" ${isChecked ? 'checked' : ''} aria-label="${member.name} ${fee.name}" data-member-id="${member.id}" data-fee-id="${fee.id}" data-year="${year}" /></td>`;
+                }).join('')
+              : '<td>—</td>';
+
+            return `
+              <tr>
+                <td>${index + 1}</td>
+                <td>${member.name}</td>
+                <td><span class="${status.className}">${status.label}</span></td>
+                ${monthlyCells}
+                ${feeCells}
+              </tr>
+            `;
+          }).join('');
+
+          tableBody.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+            checkbox.addEventListener('change', async (event) => {
+              const target = event.target;
+              const memberId = Number(target.dataset.memberId);
+              const year = Number(target.dataset.year);
+              const dataSet = window.TRMSAuth.getMockData();
+              const previousChecked = !target.checked;
+              let result;
+
+              if (target.dataset.feeId) {
+                const feeId = target.dataset.feeId;
+                const paymentMatch = dataSet.additionalFeePayments.find((item) => Number(item.member_id) === memberId && item.fee_id === feeId && Number(item.year) === year);
+
+                const fee = dataSet.additionalFees.find((item) => item.id === feeId);
+                if (paymentMatch) {
+                  paymentMatch.paid = target.checked;
+                } else if (fee) {
+                  dataSet.additionalFeePayments.push({ member_id: memberId, fee_id: feeId, year, paid: target.checked, amount: fee.amount });
+                }
+
+                result = await window.TRMSAuth.saveAdditionalFeePayment({
+                  member_id: memberId,
+                  fee_id: feeId,
+                  year,
+                  paid: target.checked,
+                  amount: fee?.amount || paymentMatch?.amount || 0
+                });
+              } else {
+                const month = target.dataset.month;
+                const paymentMatch = dataSet.monthlyPayments.find((item) => Number(item.member_id) === memberId && item.month === month && Number(item.year) === year);
+
+                if (paymentMatch) {
+                  paymentMatch.paid = target.checked;
+                } else {
+                  dataSet.monthlyPayments.push({ member_id: memberId, year, month, paid: target.checked, amount: 5 });
+                }
+
+                result = await window.TRMSAuth.saveMonthlyPayment({
+                  member_id: memberId,
+                  year,
+                  month,
+                  paid: target.checked,
+                  amount: paymentMatch?.amount || dataSet.monthlyDue.monthly_amount || 5
+                });
+              }
+
+              if (!result.success) {
+                target.checked = previousChecked;
+                alert(result.message);
+                return;
+              }
+
+              data = window.TRMSAuth.getMockData();
+              renderTable();
+            });
+          });
+        }
+
+        yearSelect.addEventListener('change', renderTable);
+        memberSearch.addEventListener('input', renderTable);
+        renderTable();
+      });
+    </script>
+  </body>
+</html>

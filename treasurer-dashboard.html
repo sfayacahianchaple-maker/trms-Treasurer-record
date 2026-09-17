@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Treasurer Dashboard</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body data-role="zone_treasurer" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Zone Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="nav-list">
+          <li><a class="active" href="treasurer-dashboard.html">Dashboard</a></li>
+          <li><a href="treasurer-members.html">My Members</a></li>
+          <li><a href="treasurer-payments.html">Payment Management</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header">
+          <h1>Treasurer Dashboard</h1>
+        </div>
+
+        <section class="card">
+          <h2 id="welcomeTitle">Welcome</h2>
+          <div class="zone-header">
+            <div>
+              <p><strong>Assigned Zone:</strong> <span id="assignedZoneLabel">-</span></p>
+            </div>
+          </div>
+
+          <div class="metrics-grid grid" id="treasurerMetrics"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260917-3"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+        const user = window.TRMSAuth.getCurrentUser();
+        const zoneId = user?.zone_id;
+        const data = window.TRMSAuth.getMockData();
+        const zone = data.zones.find((item) => Number(item.id) === Number(zoneId));
+        document.getElementById('welcomeTitle').textContent = `Welcome, ${user.name}`;
+        document.getElementById('assignedZoneLabel').textContent = zone ? zone.name : 'Not assigned';
+
+        const memberList = data.members.filter((member) => Number(member.zone_id) === Number(zoneId));
+        const metrics = document.getElementById('treasurerMetrics');
+        metrics.innerHTML = [
+          { label: 'Total Members', value: memberList.length },
+          { label: 'Active Members', value: memberList.filter((member) => member.is_active).length },
+          { label: 'Inactive Members', value: memberList.filter((member) => !member.is_active).length }
+        ].map((metric) => `
+          <article class="card metric-card">
+            <span class="label">${metric.label}</span>
+            <span class="value">${metric.value}</span>
+          </article>
+        `).join('');
+      });
+    </script>
+  </body>
+</html>

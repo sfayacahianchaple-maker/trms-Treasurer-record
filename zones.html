@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zones</title>
+    <link rel="stylesheet" href="css/style.css?v=20260917-2" />
+  </head>
+  <body data-role="admin" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Head Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="nav-list">
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a class="active" href="zones.html">Zone List</a></li>
+          <li><a href="create-zone.html">Create Zone</a></li>
+          <li><a href="members.html">Members</a></li>
+          <li><a href="treasurers.html">Zone Treasurers</a></li>
+          <li><a href="monthly-due.html">Monthly Due</a></li>
+          <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="payment-records.html">Payment Records</a></li>
+          <li><a href="reports.html">Reports</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header">
+          <h1>Zone List</h1>
+        </div>
+
+        <section class="card zone-list-panel">
+          <div class="section-heading">
+            <h2>Zones</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Zone Name</th>
+                  <th>Description</th>
+                  <th>Assigned Treasurer</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="zonesTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260917-3"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+        const body = document.getElementById('zonesTableBody');
+
+        function renderZones() {
+          const data = window.TRMSAuth.getMockData();
+          body.innerHTML = data.zones.map((zone) => {
+            const treasurer = data.profiles.find((profile) =>
+              profile.role === 'zone_treasurer' &&
+              (Number(profile.zone_id) === Number(zone.id) || profile.id === zone.treasurer_id)
+            );
+
+            return `
+              <tr>
+                <td>${zone.name}</td>
+                <td>${zone.description || '-'}</td>
+                <td>${treasurer ? treasurer.name : 'Unassigned'}</td>
+                <td><a href="zone-members.html?zoneId=${zone.id}" class="btn btn-secondary">View Record</a></td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+        renderZones();
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Members</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body data-role="zone_treasurer" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Zone Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="nav-list">
+          <li><a href="treasurer-dashboard.html">Dashboard</a></li>
+          <li><a class="active" href="treasurer-members.html">My Members</a></li>
+          <li><a href="treasurer-payments.html">Payment Management</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header">
+          <h1>My Members</h1>
+        </div>
+
+        <section class="card">
+          <div class="zone-header">
+            <div>
+              <p><strong>Assigned Zone:</strong> <span id="assignedZoneLabel">-</span></p>
+              <p><strong>Total Members:</strong> <span id="totalMembers">0</span></p>
+              <p><strong>Active Members:</strong> <span id="activeMembers">0</span></p>
+              <p><strong>Inactive Members:</strong> <span id="inactiveMembers">0</span></p>
+            </div>
+            <div class="inline-controls">
+              <label for="memberYearSelect">Year</label>
+              <select id="memberYearSelect">
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Member</th>
+                  <th>Status</th>
+                  <th>Total Paid</th>
+                  <th>Total Unpaid</th>
+                </tr>
+              </thead>
+              <tbody id="memberTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260917-8"></script>
+    <script src="js/utils.js?v=20260917-4"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+        const user = window.TRMSAuth.getCurrentUser();
+        const zoneId = user?.zone_id;
+        const data = window.TRMSAuth.getMockData();
+        const zone = data.zones.find((item) => Number(item.id) === Number(zoneId)) || data.zones[0];
+        const members = data.members.filter((member) => Number(member.zone_id) === Number(zone.id));
+        const yearSelect = document.getElementById('memberYearSelect');
+
+        document.getElementById('assignedZoneLabel').textContent = zone ? zone.name : 'Not assigned';
+        document.getElementById('totalMembers').textContent = members.length;
+        document.getElementById('activeMembers').textContent = members.filter((member) => member.is_active).length;
+        document.getElementById('inactiveMembers').textContent = members.filter((member) => !member.is_active).length;
+
+        const tableBody = document.getElementById('memberTableBody');
+
+        function renderMembers() {
+          const year = Number(yearSelect.value);
+          tableBody.innerHTML = members.map((member, index) => {
+            const status = window.TRMSUtils.calculateMemberStatus(member.id, year);
+            const totalPaid = data.monthlyPayments
+              .filter((payment) => Number(payment.member_id) === Number(member.id) && Number(payment.year) === year && payment.paid)
+              .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+            const totalUnpaid = data.monthlyPayments
+              .filter((payment) => Number(payment.member_id) === Number(member.id) && Number(payment.year) === year && !payment.paid)
+              .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
+            return `
+              <tr>
+                <td>${index + 1}</td>
+                <td>${member.name}</td>
+                <td><span class="${status.className}">${status.label}</span></td>
+                <td>${window.TRMSUtils.formatMoneyShort(totalPaid)}</td>
+                <td>${window.TRMSUtils.formatMoneyShort(totalUnpaid)}</td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+        yearSelect.addEventListener('change', renderMembers);
+        renderMembers();
+      });
+    </script>
+  </body>
+</html>

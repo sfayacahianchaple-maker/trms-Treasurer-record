@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Additional Fees</title>
+    <link rel="stylesheet" href="css/style.css?v=20260917-3" />
+  </head>
+  <body data-role="admin" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Head Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="nav-list">
+          <li><a href="admin-dashboard.html"> Dashboard</a></li>
+          <li><a href="zones.html">Zone List</a></li>
+          <li><a href="create-zone.html">Create Zone</a></li>
+          <li><a href="members.html">Members</a></li>
+          <li><a href="treasurers.html">Zone Treasurers</a></li>
+          <li><a href="monthly-due.html">Monthly Due</a></li>
+          <li><a class="active" href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="payment-records.html">Payment Records</a></li>
+          <li><a href="reports.html">Reports</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header">
+          <h1>Additional Fees</h1>
+        </div>
+
+        <section class="card">
+          <form id="addFeeForm" class="form-grid">
+            <div class="form-control">
+              <label for="feeName">Fee Name</label>
+              <input id="feeName" type="text" placeholder="Special Contribution" required />
+            </div>
+            <div class="form-control">
+              <label for="feeAmount">Amount</label>
+              <input id="feeAmount" type="number" min="0" step="0.01" placeholder="0.00" required />
+            </div>
+            <div class="form-control">
+              <label for="feeYear">Year</label>
+              <input id="feeYear" type="number" value="2026" required />
+            </div>
+            <div class="form-control">
+              <label for="feeDescription">Description</label>
+              <input id="feeDescription" type="text" placeholder="Additional fee" />
+            </div>
+            <div class="button-group button-group-spaced form-actions-full">
+              <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card card-spaced-top">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fee Name</th>
+                  <th>Amount</th>
+                  <th>Year</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody id="feesTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260917-3"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+        const body = document.getElementById('feesTableBody');
+        const addFeeForm = document.getElementById('addFeeForm');
+
+        function renderFees() {
+          const data = window.TRMSAuth.getMockData();
+          body.innerHTML = data.additionalFees.map((fee) => `
+            <tr>
+              <td>${fee.name}</td>
+              <td>${window.TRMSUtils.formatMoneyShort(fee.amount)}</td>
+              <td>${fee.year}</td>
+              <td>${fee.description || 'N/A'}</td>
+            </tr>
+          `).join('');
+        }
+
+        addFeeForm.addEventListener('submit', (event) => {
+          event.preventDefault();
+          const name = document.getElementById('feeName').value.trim();
+          const amount = Number(document.getElementById('feeAmount').value || 0);
+          const year = Number(document.getElementById('feeYear').value || new Date().getFullYear());
+          const description = document.getElementById('feeDescription').value.trim() || 'Additional fee';
+          if (!name || amount < 0 || !year) return;
+
+          const data = window.TRMSAuth.getMockData();
+          data.additionalFees.push({
+            id: `fee-${Date.now()}`,
+            name: name.trim(),
+            amount,
+            year,
+            description
+          });
+
+          window.TRMSAuth.saveMockData(data);
+          addFeeForm.reset();
+          document.getElementById('feeYear').value = new Date().getFullYear();
+          renderFees();
+        });
+
+        renderFees();
+      });
+    </script>
+  </body>
+</html>

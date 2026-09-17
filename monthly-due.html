@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monthly Due</title>
+    <link rel="stylesheet" href="css/style.css?v=20260917-2" />
+  </head>
+  <body data-role="admin" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Head Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="nav-list">
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a href="zones.html">Zone List</a></li>
+          <li><a href="create-zone.html">Create Zone</a></li>
+          <li><a href="members.html">Members</a></li>
+          <li><a class="active" href="monthly-due.html">Monthly Due</a></li>
+          <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="payment-records.html">Payment Records</a></li>
+          <li><a href="reports.html">Reports</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header">
+          <h1>Monthly Due</h1>
+        </div>
+
+        <section class="card">
+          <div class="form-grid">
+            <div class="form-control">
+              <label for="dueYear">Year</label>
+              <input id="dueYear" type="number" value="2026" />
+            </div>
+            <div class="form-control">
+              <label for="monthlyAmount">Monthly Due</label>
+              <input id="monthlyAmount" type="number" step="0.01" value="5" />
+            </div>
+            <div class="form-control">
+              <label for="yearlyDue">Yearly Due</label>
+              <input id="yearlyDue" type="number" step="0.01" value="60" readonly />
+            </div>
+            <div class="form-control">
+              <label for="activeThreshold">Active Threshold</label>
+              <input id="activeThreshold" type="number" step="0.01" value="30" readonly />
+            </div>
+          </div>
+          <div class="button-group button-group-spaced">
+            <button type="button" class="btn btn-primary" id="saveDueBtn">Save</button>
+            <span class="save-status" id="saveDueStatus" role="status" aria-live="polite"></span>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260917-3"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+        const data = window.TRMSAuth.getMockData();
+        const monthlyInput = document.getElementById('monthlyAmount');
+        const yearlyInput = document.getElementById('yearlyDue');
+        const thresholdInput = document.getElementById('activeThreshold');
+        const dueYearInput = document.getElementById('dueYear');
+        const saveStatus = document.getElementById('saveDueStatus');
+
+        monthlyInput.value = data.monthlyDue.monthly_amount || 5;
+        yearlyInput.value = data.monthlyDue.yearly_due || 60;
+        thresholdInput.value = data.monthlyDue.active_threshold || 30;
+        dueYearInput.value = data.monthlyDue.year || 2026;
+
+        monthlyInput.addEventListener('input', () => {
+          const monthly = Number(monthlyInput.value || 0);
+          yearlyInput.value = (monthly * 12).toFixed(2);
+          thresholdInput.value = (Number(yearlyInput.value) * 0.5).toFixed(2);
+        });
+
+        document.getElementById('saveDueBtn').addEventListener('click', async () => {
+          const settings = {
+            year: Number(dueYearInput.value || 2026),
+            monthly_amount: Number(monthlyInput.value || 5),
+            yearly_due: Number(yearlyInput.value || 60),
+            active_threshold: Number(thresholdInput.value || 30)
+          };
+
+          saveStatus.className = 'save-status is-saving';
+          saveStatus.textContent = 'Saving...';
+          const result = await window.TRMSAuth.saveMonthlyDueSettings(settings);
+
+          if (!result.success) {
+            saveStatus.className = 'save-status is-error';
+            saveStatus.textContent = result.message;
+            return;
+          }
+
+          saveStatus.className = 'save-status is-success';
+          saveStatus.textContent = 'Monthly due settings saved.';
+          window.setTimeout(() => {
+            saveStatus.textContent = '';
+            saveStatus.className = 'save-status';
+          }, 3500);
+        });
+      });
+    </script>
+  </body>
+</html>

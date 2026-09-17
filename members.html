@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Members</title>
+    <link rel="stylesheet" href="css/style.css?v=20260916-9" />
+  </head>
+  <body data-role="admin" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Head Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="nav-list">
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a href="zones.html">Zone List</a></li>
+          <li><a href="create-zone.html">Create Zone</a></li>
+          <li><a class="active" href="members.html">Members</a></li>
+          <li><a href="treasurers.html">Zone Treasurers</a></li>
+          <li><a href="monthly-due.html">Monthly Due</a></li>
+          <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="payment-records.html">Payment Records</a></li>
+          <li><a href="reports.html">Reports</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header">
+          <h1>Members</h1>
+        </div>
+
+        <section class="card card-spaced-bottom">
+          <h2>Add Member</h2>
+          <form id="addMemberForm" class="form-grid">
+            <div class="form-control">
+              <label for="memberName">Full Name</label>
+              <input id="memberName" type="text" placeholder="Juan Dela Cruz" required />
+            </div>
+            <div class="form-control">
+              <label for="memberAddress">Address</label>
+              <input id="memberAddress" type="text" placeholder="Street, Barangay" />
+            </div>
+            <div class="form-control">
+              <label for="memberPhone">Phone</label>
+              <input id="memberPhone" type="tel" placeholder="0917-123-4567" />
+            </div>
+            <div class="form-control">
+              <label for="memberZone">Assigned Zone</label>
+              <select id="memberZone"></select>
+            </div>
+            <div class="form-control form-actions-end">
+              <div class="button-group">
+                <button type="submit" class="btn btn-primary">+ Save Member</button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <div class="modal-overlay" id="editMemberModal" hidden>
+          <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="editMemberTitle">
+            <div class="page-header">
+              <div>
+                <p class="eyebrow">Member Management</p>
+                <h2 id="editMemberTitle">Edit Member</h2>
+              </div>
+              <button type="button" class="modal-close" id="closeEditMember" aria-label="Close edit member dialog">&times;</button>
+            </div>
+            <form id="editMemberForm" class="form-grid">
+              <div class="form-control">
+                <label for="editMemberName">Full Name</label>
+                <input id="editMemberName" type="text" required />
+              </div>
+              <div class="form-control">
+                <label for="editMemberAddress">Address</label>
+                <input id="editMemberAddress" type="text" />
+              </div>
+              <div class="form-control">
+                <label for="editMemberPhone">Phone</label>
+                <input id="editMemberPhone" type="tel" />
+              </div>
+              <div class="form-control">
+                <label for="editMemberZone">Assigned Zone</label>
+                <select id="editMemberZone"></select>
+              </div>
+              <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelEditMember">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Member</button>
+              </div>
+            </form>
+          </section>
+        </div>
+
+        <section class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Zone</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="membersTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260917-8"></script>
+    <script src="js/utils.js?v=20260917-4"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+        const body = document.getElementById('membersTableBody');
+        const form = document.getElementById('addMemberForm');
+        const zoneSelect = document.getElementById('memberZone');
+        const editModal = document.getElementById('editMemberModal');
+        const editForm = document.getElementById('editMemberForm');
+        const editZoneSelect = document.getElementById('editMemberZone');
+        let editingMemberId = null;
+
+        function populateZones() {
+          const data = window.TRMSAuth.getMockData();
+          zoneSelect.innerHTML = data.zones.map((zone) => `<option value="${zone.id}">${zone.name}</option>`).join('');
+          editZoneSelect.innerHTML = data.zones.map((zone) => `<option value="${zone.id}">${zone.name}</option>`).join('');
+        }
+
+        function renderMembers() {
+          const data = window.TRMSAuth.getMockData();
+          const year = Number(data.monthlyDue?.year || new Date().getFullYear());
+          body.innerHTML = data.members.map((member) => {
+            const zone = data.zones.find((item) => Number(item.id) === Number(member.zone_id));
+            const status = window.TRMSUtils.calculateMemberStatus(member.id, year);
+            return `
+              <tr>
+                <td>${member.id}</td>
+                <td>${member.name}</td>
+                <td>${zone ? zone.name : 'Unknown'}</td>
+                <td><span class="${status.className}">${status.label}</span></td>
+                <td>
+                  <div class="button-group">
+                    <button type="button" class="btn btn-secondary edit-member-button" data-member-id="${member.id}">Edit</button>
+                    <button type="button" class="btn btn-danger delete-member-button" data-member-id="${member.id}">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+        function closeEditModal() {
+          editingMemberId = null;
+          editForm.reset();
+          editModal.hidden = true;
+        }
+
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const name = document.getElementById('memberName').value.trim();
+          const address = document.getElementById('memberAddress').value.trim();
+          const phone = document.getElementById('memberPhone').value.trim();
+          const zoneId = Number(zoneSelect.value);
+
+          if (!name || !zoneId) return;
+
+          const result = await window.TRMSAuth.createMember({ zone_id: zoneId, name, address, phone, is_active: true });
+
+          if (!result.success) {
+            window.alert(result.message);
+            return;
+          }
+
+          form.reset();
+          renderMembers();
+        });
+
+        editForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const result = await window.TRMSAuth.updateMember(editingMemberId, {
+            zone_id: Number(editZoneSelect.value),
+            name: document.getElementById('editMemberName').value.trim(),
+            address: document.getElementById('editMemberAddress').value.trim(),
+            phone: document.getElementById('editMemberPhone').value.trim()
+          });
+
+          if (!result.success) {
+            window.alert(result.message);
+            return;
+          }
+
+          closeEditModal();
+          renderMembers();
+        });
+
+        document.getElementById('closeEditMember').addEventListener('click', closeEditModal);
+        document.getElementById('cancelEditMember').addEventListener('click', closeEditModal);
+        editModal.addEventListener('click', (event) => {
+          if (event.target === editModal) closeEditModal();
+        });
+
+        body.addEventListener('click', async (event) => {
+          const editButton = event.target.closest('.edit-member-button');
+          const deleteButton = event.target.closest('.delete-member-button');
+          const data = window.TRMSAuth.getMockData();
+
+          if (editButton) {
+            const member = data.members.find((item) => Number(item.id) === Number(editButton.dataset.memberId));
+            if (!member) return;
+
+            editingMemberId = member.id;
+            document.getElementById('editMemberName').value = member.name || '';
+            document.getElementById('editMemberAddress').value = member.address || '';
+            document.getElementById('editMemberPhone').value = member.phone || '';
+            editZoneSelect.value = String(member.zone_id);
+            editModal.hidden = false;
+            document.getElementById('editMemberName').focus();
+            return;
+          }
+
+          if (deleteButton) {
+            const memberId = Number(deleteButton.dataset.memberId);
+            const member = data.members.find((item) => Number(item.id) === memberId);
+            if (!member || !window.confirm(`Delete ${member.name}?`)) return;
+
+            const result = await window.TRMSAuth.deleteMember(memberId);
+            if (!result.success) {
+              window.alert(result.message);
+              return;
+            }
+
+            if (editingMemberId === memberId) closeEditModal();
+            renderMembers();
+          }
+        });
+
+        populateZones();
+        renderMembers();
+      });
+    </script>
+  </body>
+</html>

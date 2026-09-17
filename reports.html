@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reports</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body data-role="admin" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Head Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="nav-list">
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a href="zones.html">Zone List</a></li>
+          <li><a href="create-zone.html">Create Zone</a></li>
+          <li><a href="members.html">Members</a></li>
+          <li><a href="monthly-due.html">Monthly Due</a></li>
+          <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="payment-records.html">Payment Records</a></li>
+          <li><a class="active" href="reports.html">Reports</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header page-header--split">
+          <div>
+            <p class="eyebrow">Overview</p>
+            <h1>Reports</h1>
+          </div>
+          <div class="header-pill">Financial snapshot</div>
+        </div>
+
+        <section class="grid metrics-grid" id="reportMetrics"></section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260917-3"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+        const data = window.TRMSAuth.getMockData();
+        const metrics = document.getElementById('reportMetrics');
+        const totalMembers = data.members.length;
+        const activeMembers = data.members.filter((member) => member.is_active).length;
+        const inactiveMembers = data.members.filter((member) => !member.is_active).length;
+        const monthlyPaid = data.monthlyPayments.filter((payment) => payment.paid).length;
+        const monthlyUnpaid = data.monthlyPayments.filter((payment) => !payment.paid).length;
+        const feePaid = data.additionalFeePayments.filter((payment) => payment.paid).length;
+        const feeUnpaid = data.additionalFeePayments.filter((payment) => !payment.paid).length;
+        const amountPaid = data.monthlyPayments.filter((payment) => payment.paid).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+        const amountUnpaid = data.monthlyPayments.filter((payment) => !payment.paid).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+        const cards = [
+          { label: 'Total Members', value: totalMembers },
+          { label: 'Active Members', value: activeMembers },
+          { label: 'Inactive Members', value: inactiveMembers },
+          { label: 'Monthly Paid', value: monthlyPaid },
+          { label: 'Monthly Unpaid', value: monthlyUnpaid },
+          { label: 'Additional Fees Paid', value: feePaid },
+          { label: 'Additional Fees Unpaid', value: feeUnpaid },
+          { label: 'Total Paid', value: window.TRMSUtils.formatMoneyShort(amountPaid) },
+          { label: 'Total Unpaid', value: window.TRMSUtils.formatMoneyShort(amountUnpaid) }
+        ];
+
+        metrics.innerHTML = cards.map((card) => `
+          <article class="card metric-card">
+            <span class="label">${card.label}</span>
+            <span class="value">${card.value}</span>
+          </article>
+        `).join('');
+      });
+    </script>
+  </body>
+</html>

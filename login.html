@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TRMS Login</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <main class="auth-page">
+      <section class="auth-card">
+        <h1>Login</h1>
+        <p>Sign in to continue to TRMS.</p>
+
+        <div class="auth-role-switch" aria-label="Login type selector">
+          <button type="button" class="btn btn-secondary auth-role-btn active" data-role="admin">Admin Login</button>
+          <button type="button" class="btn btn-secondary auth-role-btn" data-role="zone_treasurer">Zone User Login</button>
+        </div>
+
+        <form id="loginForm" class="auth-form">
+          <div class="form-control">
+            <label for="email" id="emailLabel">Admin Email / Username</label>
+            <input id="email" name="email" type="text" placeholder="admin@yourdomain.com" required />
+          </div>
+
+          <div class="form-control">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" placeholder="Password" required />
+          </div>
+
+          <button type="submit" class="btn btn-primary">Login</button>
+          <div id="loginMessage" class="empty-state login-message"></div>
+        </form>
+      </section>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260917-3"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('loginForm');
+        const message = document.getElementById('loginMessage');
+        const emailInput = document.getElementById('email');
+        const emailLabel = document.getElementById('emailLabel');
+        const roleButtons = document.querySelectorAll('.auth-role-btn');
+        let selectedRole = 'admin';
+
+        function updateRoleUI(role) {
+          selectedRole = role;
+          roleButtons.forEach((button) => {
+            const isActive = button.dataset.role === role;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+          });
+
+          if (role === 'admin') {
+            emailLabel.textContent = 'Admin Email / Username';
+            emailInput.placeholder = 'admin@yourdomain.com';
+          } else {
+            emailLabel.textContent = 'Zone User Email / Username';
+            emailInput.placeholder = 'zone@yourdomain.com';
+          }
+        }
+
+        roleButtons.forEach((button) => {
+          button.addEventListener('click', () => updateRoleUI(button.dataset.role));
+        });
+
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const email = document.getElementById('email').value;
+          const password = document.getElementById('password').value;
+
+          const result = await window.TRMSAuth.login({ email, password });
+          if (!result.success) {
+            message.textContent = result.message;
+            return;
+          }
+
+          if (selectedRole === 'admin' && result.user.role !== 'admin') {
+            message.textContent = 'This login option is for Admin only. Please use the Zone User login for treasurer accounts.';
+            return;
+          }
+
+          if (selectedRole === 'zone_treasurer' && result.user.role !== 'zone_treasurer') {
+            message.textContent = 'This login option is for Zone User only. Please use the Admin login for administrator accounts.';
+            return;
+          }
+
+          const redirect = result.user.role === 'admin' ? 'admin-dashboard.html' : 'treasurer-dashboard.html';
+          window.location.href = redirect;
+        });
+
+        updateRoleUI(selectedRole);
+      });
+    </script>
+  </body>
+</html>

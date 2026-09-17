@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Zone</title>
+    <link rel="stylesheet" href="css/style.css?v=20260917-3" />
+  </head>
+  <body data-role="admin" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Head Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="nav-list">
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a href="zones.html">Zone List</a></li>
+          <li><a class="active" href="create-zone.html">Create Zone</a></li>
+          <li><a href="members.html">Members</a></li>
+          <li><a href="treasurers.html">Zone Treasurers</a></li>
+          <li><a href="monthly-due.html">Monthly Due</a></li>
+          <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="payment-records.html">Payment Records</a></li>
+          <li><a href="reports.html">Reports</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header">
+          <h1>Create Zone</h1>
+        </div>
+
+        <section class="card">
+          <form id="addZoneForm" class="form-grid">
+            <div class="form-control">
+              <label for="zoneName">Zone Name</label>
+              <input id="zoneName" type="text" placeholder="Zone 3" required />
+            </div>
+            <div class="form-control">
+              <label for="zoneDescription">Description</label>
+              <input id="zoneDescription" type="text" placeholder="East District" required />
+            </div>
+            <div class="form-control form-actions">
+              <button type="submit" class="btn btn-primary">Add Zone</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card card-spaced-top">
+          <div class="section-heading">
+            <h2>Zone List</h2>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Zone Name</th>
+                  <th>Description</th>
+                  <th>Assigned Treasurer</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="zonesTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="modal-overlay" id="editZoneModal" hidden>
+          <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="editZoneTitle">
+            <div class="page-header">
+              <div>
+                <p class="eyebrow">Zone Management</p>
+                <h2 id="editZoneTitle">Edit Zone</h2>
+              </div>
+              <button type="button" class="modal-close" id="closeEditZone" aria-label="Close edit zone dialog">&times;</button>
+            </div>
+            <form id="editZoneForm" class="form-grid">
+              <div class="form-control">
+                <label for="editZoneName">Zone Name</label>
+                <input id="editZoneName" type="text" required />
+              </div>
+              <div class="form-control">
+                <label for="editZoneDescription">Description</label>
+                <input id="editZoneDescription" type="text" required />
+              </div>
+              <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelEditZone">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Zone</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260917-3"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+        const form = document.getElementById('addZoneForm');
+        const body = document.getElementById('zonesTableBody');
+        const editModal = document.getElementById('editZoneModal');
+        const editForm = document.getElementById('editZoneForm');
+        let editingZoneId = null;
+
+        function renderZones() {
+          const data = window.TRMSAuth.getMockData();
+          body.innerHTML = data.zones.map((zone) => {
+            const treasurer = data.profiles.find((profile) =>
+              profile.role === 'zone_treasurer' &&
+              (Number(profile.zone_id) === Number(zone.id) || profile.id === zone.treasurer_id)
+            );
+
+            return `
+              <tr>
+                <td>${zone.name}</td>
+                <td>${zone.description || '-'}</td>
+                <td>${treasurer ? treasurer.name : 'Unassigned'}</td>
+                <td>
+                  <div class="button-group">
+                    <button type="button" class="btn btn-secondary edit-zone-button" data-zone-id="${zone.id}">Edit</button>
+                    <button type="button" class="btn btn-danger delete-zone-button" data-zone-id="${zone.id}">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+        function closeEditModal() {
+          editingZoneId = null;
+          editForm.reset();
+          editModal.hidden = true;
+        }
+
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const name = document.getElementById('zoneName').value.trim();
+          const description = document.getElementById('zoneDescription').value.trim();
+          if (!name || !description) return;
+
+          const result = await window.TRMSAuth.createZone({ name, description });
+          if (!result.success) {
+            alert(result.message);
+            return;
+          }
+
+          form.reset();
+          renderZones();
+        });
+
+        editForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const result = await window.TRMSAuth.updateZone(editingZoneId, {
+            name: document.getElementById('editZoneName').value.trim(),
+            description: document.getElementById('editZoneDescription').value.trim()
+          });
+
+          if (!result.success) {
+            alert(result.message);
+            return;
+          }
+
+          closeEditModal();
+          renderZones();
+        });
+
+        document.getElementById('closeEditZone').addEventListener('click', closeEditModal);
+        document.getElementById('cancelEditZone').addEventListener('click', closeEditModal);
+        editModal.addEventListener('click', (event) => {
+          if (event.target === editModal) closeEditModal();
+        });
+
+        body.addEventListener('click', async (event) => {
+          const editButton = event.target.closest('.edit-zone-button');
+          const deleteButton = event.target.closest('.delete-zone-button');
+          const data = window.TRMSAuth.getMockData();
+
+          if (editButton) {
+            const zone = data.zones.find((item) => Number(item.id) === Number(editButton.dataset.zoneId));
+            if (!zone) return;
+
+            editingZoneId = zone.id;
+            document.getElementById('editZoneName').value = zone.name || '';
+            document.getElementById('editZoneDescription').value = zone.description || '';
+            editModal.hidden = false;
+            document.getElementById('editZoneName').focus();
+            return;
+          }
+
+          if (deleteButton) {
+            const zoneId = Number(deleteButton.dataset.zoneId);
+            const zone = data.zones.find((item) => Number(item.id) === zoneId);
+            if (!zone || !confirm(`Delete ${zone.name}? This may also remove its members.`)) return;
+
+            const result = await window.TRMSAuth.deleteZone(zoneId);
+            if (!result.success) {
+              alert(result.message);
+              return;
+            }
+
+            if (editingZoneId === zoneId) closeEditModal();
+            renderZones();
+          }
+        });
+
+        renderZones();
+      });
+    </script>
+  </body>
+</html>
