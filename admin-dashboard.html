@@ -59,8 +59,8 @@
     </div>
 
     <script src="js/config.js"></script>
-    <script src="js/auth.js?v=20260917-3"></script>
-    <script src="js/utils.js"></script>
+    <script src="js/auth.js?v=20260917-9"></script>
+    <script src="js/utils.js?v=20260917-5"></script>
     <script src="js/guard.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
@@ -71,8 +71,13 @@
 
         const totalZones = data.zones.length;
         const totalMembers = data.members.length;
-        const activeMembers = data.members.filter((member) => member.is_active).length;
-        const inactiveMembers = data.members.filter((member) => !member.is_active).length;
+        const statusYear = Number(data.monthlyDue?.year || new Date().getFullYear());
+        const memberStatuses = new Map(data.members.map((member) => [
+          member.id,
+          window.TRMSUtils.calculateMemberStatus(member.id, statusYear)
+        ]));
+        const activeMembers = data.members.filter((member) => memberStatuses.get(member.id)?.label === 'Active').length;
+        const inactiveMembers = totalMembers - activeMembers;
         const totalPaid = data.monthlyPayments.filter((payment) => payment.paid).length * (data.monthlyDue.monthly_amount || 5);
         const totalUnpaid = (data.monthlyPayments.filter((payment) => !payment.paid).length * (data.monthlyDue.monthly_amount || 5));
 
@@ -95,13 +100,14 @@
         summaryTable.innerHTML = data.zones.map((zone) => {
           const zoneMembers = data.members.filter((member) => Number(member.zone_id) === Number(zone.id));
           const zoneTreasurer = data.profiles.find((profile) => Number(profile.zone_id) === Number(zone.id) && profile.role === 'zone_treasurer');
+          const activeZoneMembers = zoneMembers.filter((member) => memberStatuses.get(member.id)?.label === 'Active').length;
           return `
             <tr>
               <td>${zone.name}</td>
               <td>${zoneTreasurer ? zoneTreasurer.name : 'Unassigned'}</td>
               <td>${zoneMembers.length}</td>
-              <td>${zoneMembers.filter((member) => member.is_active).length}</td>
-              <td>${zoneMembers.filter((member) => !member.is_active).length}</td>
+              <td>${activeZoneMembers}</td>
+              <td>${zoneMembers.length - activeZoneMembers}</td>
               <td><a href="zone-members.html?zoneId=${zone.id}" class="btn btn-secondary">View Record</a></td>
             </tr>
           `;

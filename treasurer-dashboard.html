@@ -43,8 +43,8 @@
     </div>
 
     <script src="js/config.js"></script>
-    <script src="js/auth.js?v=20260917-3"></script>
-    <script src="js/utils.js"></script>
+    <script src="js/auth.js?v=20260917-9"></script>
+    <script src="js/utils.js?v=20260917-5"></script>
     <script src="js/guard.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
@@ -57,11 +57,16 @@
         document.getElementById('assignedZoneLabel').textContent = zone ? zone.name : 'Not assigned';
 
         const memberList = data.members.filter((member) => Number(member.zone_id) === Number(zoneId));
+        const statusYear = Number(data.monthlyDue?.year || new Date().getFullYear());
+        const memberStatuses = new Map(memberList.map((member) => [
+          member.id,
+          window.TRMSUtils.calculateMemberStatus(member.id, statusYear)
+        ]));
         const metrics = document.getElementById('treasurerMetrics');
         metrics.innerHTML = [
           { label: 'Total Members', value: memberList.length },
-          { label: 'Active Members', value: memberList.filter((member) => member.is_active).length },
-          { label: 'Inactive Members', value: memberList.filter((member) => !member.is_active).length }
+          { label: 'Active Members', value: memberList.filter((member) => memberStatuses.get(member.id)?.label === 'Active').length },
+          { label: 'Inactive Members', value: memberList.filter((member) => memberStatuses.get(member.id)?.label !== 'Active').length }
         ].map((metric) => `
           <article class="card metric-card">
             <span class="label">${metric.label}</span>
