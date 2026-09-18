@@ -367,6 +367,23 @@
     return { success: true };
   }
 
+  async function createAdditionalFee(fee) {
+    const client = await ensureSupabaseClient();
+    if (!client) return { success: false, message: 'Supabase is not configured.' };
+
+    const { error } = await client.from('additional_fees').insert({
+      id: fee.id,
+      name: fee.name,
+      amount: fee.amount,
+      year: fee.year,
+      description: fee.description || null
+    });
+
+    if (error) return { success: false, message: error.message || 'Unable to create additional fee.' };
+    await hydrateSupabaseCache();
+    return { success: true };
+  }
+
   async function updateTreasurerProfile(profileId, { name, username, zoneId }) {
     const client = await ensureSupabaseClient();
     if (!client) return { success: false, message: 'Supabase is not configured.' };
@@ -461,6 +478,7 @@
     updateZone,
     deleteZone,
     saveMonthlyDueSettings,
+    createAdditionalFee,
     updateTreasurerProfile,
     deleteTreasurerProfile,
     saveMonthlyPayment,

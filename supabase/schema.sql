@@ -162,6 +162,7 @@ DROP POLICY IF EXISTS "monthly_payments_insert_access" ON public.monthly_payment
 DROP POLICY IF EXISTS "monthly_payments_update_access" ON public.monthly_payments;
 DROP POLICY IF EXISTS "monthly_payments_delete_access" ON public.monthly_payments;
 DROP POLICY IF EXISTS "additional_fees_read" ON public.additional_fees;
+DROP POLICY IF EXISTS "additional_fees_insert_admin" ON public.additional_fees;
 DROP POLICY IF EXISTS "additional_fee_payments_select_access" ON public.additional_fee_payments;
 DROP POLICY IF EXISTS "additional_fee_payments_insert_access" ON public.additional_fee_payments;
 DROP POLICY IF EXISTS "additional_fee_payments_update_access" ON public.additional_fee_payments;
@@ -393,6 +394,11 @@ CREATE POLICY "additional_fees_read"
   ON public.additional_fees
   FOR SELECT
   USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "additional_fees_insert_admin"
+  ON public.additional_fees
+  FOR INSERT
+  WITH CHECK (public.is_admin());
 
 CREATE POLICY "additional_fee_payments_select_access"
   ON public.additional_fee_payments

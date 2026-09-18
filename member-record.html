@@ -116,9 +116,14 @@
           const monthly = data.monthlyPayments.filter((payment) =>
             Number(payment.member_id) === memberId && Number(payment.year) === year
           );
-          const additional = data.additionalFeePayments.filter((payment) =>
-            Number(payment.member_id) === memberId && Number(payment.year) === year
-          );
+          const additional = data.additionalFees
+            .filter((fee) => Number(fee.year) === year)
+            .map((fee) => {
+              const payment = data.additionalFeePayments.find((entry) =>
+                Number(entry.member_id) === memberId && entry.fee_id === fee.id && Number(entry.year) === year
+              );
+              return { ...fee, paid: payment?.paid === true, amount: Number(payment?.amount ?? fee.amount ?? 0) };
+            });
 
           document.getElementById('monthlyRecordBody').innerHTML = monthly.length
             ? monthly.map((payment) => `
@@ -131,16 +136,13 @@
             : '<tr><td colspan="3">No monthly due records found.</td></tr>';
 
           document.getElementById('additionalRecordBody').innerHTML = additional.length
-            ? additional.map((payment) => {
-                const fee = data.additionalFees.find((item) => item.id === payment.fee_id);
-                return `
+            ? additional.map((fee) => `
                   <tr>
-                    <td>${fee ? fee.name : 'Additional Fee'}</td>
-                    <td>${window.TRMSUtils.formatMoneyShort(payment.amount || 0)}</td>
-                    <td><span class="status ${payment.paid ? 'active' : 'inactive'}">${payment.paid ? 'Paid' : 'Unpaid'}</span></td>
+                    <td>${fee.name}</td>
+                    <td>${window.TRMSUtils.formatMoneyShort(fee.amount)}</td>
+                    <td><span class="status ${fee.paid ? 'active' : 'inactive'}">${fee.paid ? 'Paid' : 'Unpaid'}</span></td>
                   </tr>
-                `;
-              }).join('')
+                `).join('')
             : '<tr><td colspan="3">No additional fee records found.</td></tr>';
         }
 

@@ -158,9 +158,14 @@
           const monthly = data.monthlyPayments.filter((payment) =>
             Number(payment.member_id) === Number(selectedMember.id) && Number(payment.year) === year
           );
-          const additionalFees = data.additionalFeePayments.filter((payment) =>
-            Number(payment.member_id) === Number(selectedMember.id) && Number(payment.year) === year
-          );
+          const additionalFees = data.additionalFees
+            .filter((fee) => Number(fee.year) === year)
+            .map((fee) => {
+              const payment = data.additionalFeePayments.find((entry) =>
+                Number(entry.member_id) === Number(selectedMember.id) && entry.fee_id === fee.id && Number(entry.year) === year
+              );
+              return { ...fee, paid: payment?.paid === true, amount: Number(payment?.amount ?? fee.amount ?? 0) };
+            });
 
           recordMemberName.textContent = `${selectedMember.name}`;
           recordMemberMeta.textContent = `${selectedMember.address || 'No address provided'} • ${selectedMember.phone || 'No phone number'}`;
@@ -177,16 +182,13 @@
             : '<tr><td colspan="3">No monthly due records found.</td></tr>';
 
           additionalRecordBody.innerHTML = additionalFees.length
-            ? additionalFees.map((payment) => {
-                const fee = data.additionalFees.find((item) => item.id === payment.fee_id);
-                return `
+            ? additionalFees.map((fee) => `
                   <tr>
-                    <td>${fee ? fee.name : 'Additional Fee'}</td>
-                    <td>${window.TRMSUtils.formatMoneyShort(payment.amount || 0)}</td>
-                    <td><span class="status ${payment.paid ? 'active' : 'inactive'}">${payment.paid ? 'Paid' : 'Unpaid'}</span></td>
+                    <td>${fee.name}</td>
+                    <td>${window.TRMSUtils.formatMoneyShort(fee.amount)}</td>
+                    <td><span class="status ${fee.paid ? 'active' : 'inactive'}">${fee.paid ? 'Paid' : 'Unpaid'}</span></td>
                   </tr>
-                `;
-              }).join('')
+                `).join('')
             : '<tr><td colspan="3">No additional fee records found.</td></tr>';
         }
 
@@ -203,14 +205,21 @@
             const totalUnpaid = data.monthlyPayments
               .filter((payment) => Number(payment.member_id) === Number(member.id) && Number(payment.year) === year && !payment.paid)
               .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+            const memberFees = data.additionalFees.filter((fee) => Number(fee.year) === year);
+            const paidFeeTotal = memberFees
+              .filter((fee) => data.additionalFeePayments.some((payment) => Number(payment.member_id) === Number(member.id) && payment.fee_id === fee.id && Number(payment.year) === year && payment.paid))
+              .reduce((sum, fee) => sum + Number(fee.amount || 0), 0);
+            const unpaidFeeTotal = memberFees
+              .filter((fee) => !data.additionalFeePayments.some((payment) => Number(payment.member_id) === Number(member.id) && payment.fee_id === fee.id && Number(payment.year) === year && payment.paid))
+              .reduce((sum, fee) => sum + Number(fee.amount || 0), 0);
 
             return `
               <tr>
                 <td>${index + 1}</td>
                 <td>${member.name}</td>
                 <td><span class="${status.className}">${status.label}</span></td>
-                <td>${window.TRMSUtils.formatMoneyShort(totalPaid)}</td>
-                <td>${window.TRMSUtils.formatMoneyShort(totalUnpaid)}</td>
+                <td>${window.TRMSUtils.formatMoneyShort(totalPaid + paidFeeTotal)}</td>
+                <td>${window.TRMSUtils.formatMoneyShort(totalUnpaid + unpaidFeeTotal)}</td>
                 <td><a class="btn btn-secondary" href="member-record.html?memberId=${member.id}&zoneId=${zoneId}&year=${year}">View Record</a></td>
               </tr>
             `;

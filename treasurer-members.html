@@ -97,14 +97,21 @@
             const totalUnpaid = data.monthlyPayments
               .filter((payment) => Number(payment.member_id) === Number(member.id) && Number(payment.year) === year && !payment.paid)
               .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+            const memberFees = data.additionalFees.filter((fee) => Number(fee.year) === year);
+            const paidFeeTotal = memberFees
+              .filter((fee) => data.additionalFeePayments.some((payment) => Number(payment.member_id) === Number(member.id) && payment.fee_id === fee.id && Number(payment.year) === year && payment.paid))
+              .reduce((sum, fee) => sum + Number(fee.amount || 0), 0);
+            const unpaidFeeTotal = memberFees
+              .filter((fee) => !data.additionalFeePayments.some((payment) => Number(payment.member_id) === Number(member.id) && payment.fee_id === fee.id && Number(payment.year) === year && payment.paid))
+              .reduce((sum, fee) => sum + Number(fee.amount || 0), 0);
 
             return `
               <tr>
                 <td>${index + 1}</td>
                 <td>${member.name}</td>
                 <td><span class="${status.className}">${status.label}</span></td>
-                <td>${window.TRMSUtils.formatMoneyShort(totalPaid)}</td>
-                <td>${window.TRMSUtils.formatMoneyShort(totalUnpaid)}</td>
+                <td>${window.TRMSUtils.formatMoneyShort(totalPaid + paidFeeTotal)}</td>
+                <td>${window.TRMSUtils.formatMoneyShort(totalUnpaid + unpaidFeeTotal)}</td>
               </tr>
             `;
           }).join('');
