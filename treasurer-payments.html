@@ -34,11 +34,7 @@
             <h2>Monthly Due</h2>
             <div class="inline-controls">
               <label for="yearSelect">Year</label>
-              <select id="yearSelect">
-                <option value="2026">2026</option>
-                <option value="2025">2025</option>
-                <option value="2024">2024</option>
-              </select>
+              <select id="yearSelect"></select>
             </div>
           </div>
 
@@ -74,7 +70,19 @@
         const tableHead = document.getElementById('paymentTableHead');
         const months = window.TRMSUtils.monthNames();
 
+        function populateYearOptions() {
+          const years = [...new Set((data.monthlyDueSettings || [])
+            .map((setting) => Number(setting.year))
+            .filter((year) => Number.isInteger(year)))]
+            .sort((first, second) => second - first);
+          yearSelect.innerHTML = years.length
+            ? years.map((year) => `<option value="${year}">${year}</option>`).join('')
+            : '<option value="" disabled selected>Monthly Due Not Created</option>';
+          yearSelect.disabled = years.length === 0;
+        }
+
         function renderHeader(year) {
+          const monthlyDue = (data.monthlyDueSettings || []).find((setting) => Number(setting.year) === Number(year));
           const feeColumns = data.additionalFees.filter((fee) => Number(fee.year) === Number(year));
           const feeHeaders = feeColumns.map((fee) => `
             <th>
@@ -88,7 +96,7 @@
               <th>#</th>
               <th>Member</th>
               <th>Status</th>
-              ${months.map((month) => `<th>${month}</th>`).join('')}
+              ${monthlyDue ? months.map((month) => `<th>${month}</th>`).join('') : '<th>Monthly Due</th>'}
               ${feeHeaders || '<th>Fees</th>'}
             </tr>
           `;
@@ -98,6 +106,7 @@
           const year = Number(yearSelect.value);
           const query = memberSearch.value.trim().toLowerCase();
           const filteredMembers = memberList.filter((member) => !query || member.name.toLowerCase().includes(query));
+          const monthlyDue = (data.monthlyDueSettings || []).find((setting) => Number(setting.year) === Number(year));
           const feeColumns = data.additionalFees.filter((fee) => Number(fee.year) === Number(year));
 
           renderHeader(year);
@@ -105,11 +114,13 @@
           tableBody.innerHTML = filteredMembers.map((member, index) => {
             const status = window.TRMSUtils.calculateMemberStatus(member.id, year);
             const paidMonths = data.monthlyPayments.filter((payment) => Number(payment.member_id) === Number(member.id) && Number(payment.year) === year);
-            const monthlyCells = months.map((month) => {
-              const match = paidMonths.find((payment) => payment.month === month);
-              const checked = match?.paid === true;
-              return `<td class="checkbox-cell"><label class="payment-toggle"><input type="checkbox" ${checked ? 'checked' : ''} aria-label="${member.name} ${month}" data-member-id="${member.id}" data-month="${month}" data-year="${year}" /><span class="payment-box" aria-hidden="true"></span></label></td>`;
-            }).join('');
+            const monthlyCells = monthlyDue
+              ? months.map((month) => {
+                  const match = paidMonths.find((payment) => payment.month === month);
+                  const checked = match?.paid === true;
+                  return `<td class="checkbox-cell"><label class="payment-toggle"><input type="checkbox" ${checked ? 'checked' : ''} aria-label="${member.name} ${month}" data-member-id="${member.id}" data-month="${month}" data-year="${year}" /><span class="payment-box" aria-hidden="true"></span></label></td>`;
+                }).join('')
+              : '<td class="payment-unavailable">Monthly Due Not Created</td>';
 
             const feeCells = feeColumns.length
               ? feeColumns.map((fee) => {
@@ -205,6 +216,7 @@
 
         yearSelect.addEventListener('change', renderTable);
         memberSearch.addEventListener('input', renderTable);
+        populateYearOptions();
         renderTable();
       });
     </script>

@@ -405,6 +405,7 @@ a { color: var(--forest); }
 .metrics-grid .metric-card {
   min-width: 0;
   min-height: 112px;
+  overflow: hidden;
 }
 
 .stats-grid-four {
@@ -428,6 +429,8 @@ a { color: var(--forest); }
 .stat-label {
   font-size: 0.8rem;
   color: var(--ink-soft);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .metric-card .value,
@@ -436,6 +439,11 @@ a { color: var(--forest); }
   font-size: 1.5rem;
   font-weight: 500;
   color: var(--forest-dark);
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .member-payment-summary {
@@ -458,6 +466,10 @@ a { color: var(--forest); }
 
 @media (max-width: 640px) {
   .metrics-grid:not(.member-payment-summary) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .member-payment-summary {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -536,6 +548,13 @@ tbody tr:last-child td {
   text-align: center;
   min-width: 54px;
   padding: 4px !important;
+}
+
+.payment-unavailable {
+  color: var(--ink-soft);
+  background: var(--paper-alt);
+  text-align: center;
+  font-style: italic;
 }
 
 .payment-toggle {
