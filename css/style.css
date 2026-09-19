@@ -392,7 +392,19 @@ a { color: var(--forest); }
 }
 
 .metrics-grid {
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+#dashboardMetrics,
+#reportMetrics,
+#treasurerMetrics {
+  grid-auto-rows: minmax(112px, 1fr);
+}
+
+.metrics-grid .metric-card {
+  min-width: 0;
+  min-height: 112px;
 }
 
 .stats-grid-four {
@@ -437,6 +449,18 @@ a { color: var(--forest); }
 .inactive-summary { border-left: 3px solid var(--clay); }
 .monthly-card { border-left: 3px solid var(--brass); }
 .fee-card { border-left: 3px solid var(--forest-light); }
+
+@media (max-width: 1100px) {
+  .metrics-grid:not(.member-payment-summary) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .metrics-grid:not(.member-payment-summary) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 
 .money-badge {
   display: inline-block;
