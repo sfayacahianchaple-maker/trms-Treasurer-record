@@ -52,7 +52,8 @@
       monthlyDue: { year: new Date().getFullYear(), monthly_amount: 0, yearly_due: 0, active_threshold: 0 },
       monthlyPayments: [],
       additionalFees: [],
-      additionalFeePayments: []
+      additionalFeePayments: [],
+      monthlyDueSettings: []
     };
   }
 
@@ -363,6 +364,41 @@
     }, { onConflict: 'year' });
 
     if (error) return { success: false, message: error.message || 'Unable to save monthly due settings.' };
+
+    const { data: members, error: membersError } = await client.from('members').select('id');
+    if (membersError) return { success: false, message: membersError.message || 'Unable to load members for the monthly due.' };
+
+    const { data: existingPayments, error: paymentsError } = await client
+      .from('monthly_payments')
+      .select('member_id, month, paid')
+      .eq('year', settings.year);
+    if (paymentsError) return { success: false, message: paymentsError.message || 'Unable to load monthly payment records.' };
+
+    const existing = new Map((existingPayments || []).map((payment) => [`${payment.member_id}-${payment.month}`, payment]));
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentMonth = months[new Date().getMonth()];
+    const paymentRows = [];
+    (members || []).forEach((member) => {
+      const month = currentMonth;
+      const current = existing.get(`${member.id}-${month}`);
+      if (!current || !current.paid) {
+        paymentRows.push({
+          member_id: member.id,
+          year: settings.year,
+          month,
+          amount: settings.monthly_amount,
+          paid: false
+        });
+      }
+    });
+
+    if (paymentRows.length) {
+      const { error: paymentUpsertError } = await client
+        .from('monthly_payments')
+        .upsert(paymentRows, { onConflict: 'member_id,year,month' });
+      if (paymentUpsertError) return { success: false, message: paymentUpsertError.message || 'Unable to create unpaid monthly due records.' };
+    }
+
     await hydrateSupabaseCache();
     return { success: true };
   }
@@ -380,6 +416,77 @@
     });
 
     if (error) return { success: false, message: error.message || 'Unable to create additional fee.' };
+
+    const { data: members, error: membersError } = await client.from('members').select('id');
+    if (membersError) return { success: false, message: membersError.message || 'Unable to load members for the additional fee.' };
+    const paymentRows = (members || []).map((member) => ({
+      fee_id: fee.id,
+      member_id: member.id,
+      year: fee.year,
+      amount: fee.amount,
+      paid: false
+    }));
+    if (paymentRows.length) {
+      const { error: paymentError } = await client
+        .from('additional_fee_payments')
+        .upsert(paymentRows, { onConflict: 'fee_id,member_id,year' });
+      if (paymentError) return { success: false, message: paymentError.message || 'Unable to create unpaid fee records.' };
+    }
+
+    await hydrateSupabaseCache();
+    return { success: true };
+  }
+
+  async function updateAdditionalFee(feeId, fee) {
+    const client = await ensureSupabaseClient();
+    if (!client) return { success: false, message: 'Supabase is not configured.' };
+
+    const { error } = await client.from('additional_fees').update({
+      name: fee.name,
+      amount: fee.amount,
+      year: fee.year,
+      description: fee.description || null
+    }).eq('id', feeId);
+    if (error) return { success: false, message: error.message || 'Unable to update additional fee.' };
+
+    const { data: payments, error: paymentsError } = await client
+      .from('additional_fee_payments')
+      .select('member_id, paid')
+      .eq('fee_id', feeId)
+      .eq('year', fee.year);
+    if (paymentsError) return { success: false, message: paymentsError.message || 'Unable to load fee payment records.' };
+    const unpaidRows = (payments || []).filter((payment) => !payment.paid).map((payment) => ({
+      fee_id: feeId,
+      member_id: payment.member_id,
+      year: fee.year,
+      amount: fee.amount,
+      paid: false
+    }));
+    if (unpaidRows.length) {
+      const { error: paymentError } = await client
+        .from('additional_fee_payments')
+        .upsert(unpaidRows, { onConflict: 'fee_id,member_id,year' });
+      if (paymentError) return { success: false, message: paymentError.message || 'Unable to update unpaid fee records.' };
+    }
+
+    await hydrateSupabaseCache();
+    return { success: true };
+  }
+
+  async function deleteAdditionalFee(feeId) {
+    const client = await ensureSupabaseClient();
+    if (!client) return { success: false, message: 'Supabase is not configured.' };
+    const { error } = await client.from('additional_fees').delete().eq('id', feeId);
+    if (error) return { success: false, message: error.message || 'Unable to delete additional fee.' };
+    await hydrateSupabaseCache();
+    return { success: true };
+  }
+
+  async function deleteMonthlyDueSettings(year) {
+    const client = await ensureSupabaseClient();
+    if (!client) return { success: false, message: 'Supabase is not configured.' };
+    const { error } = await client.from('monthly_due_settings').delete().eq('year', year);
+    if (error) return { success: false, message: error.message || 'Unable to delete monthly due settings.' };
     await hydrateSupabaseCache();
     return { success: true };
   }
@@ -479,6 +586,9 @@
     deleteZone,
     saveMonthlyDueSettings,
     createAdditionalFee,
+    updateAdditionalFee,
+    deleteAdditionalFee,
+    deleteMonthlyDueSettings,
     updateTreasurerProfile,
     deleteTreasurerProfile,
     saveMonthlyPayment,

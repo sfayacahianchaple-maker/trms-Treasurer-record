@@ -75,6 +75,12 @@ a { color: var(--forest); }
   * { transition: none !important; animation: none !important; }
 }
 
+@media (max-width: 640px) {
+  .metric-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media print {
   @page { margin: 14mm; }
 
@@ -223,15 +229,27 @@ a { color: var(--forest); }
   display: flex;
   flex-direction: column;
   gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
+
+.nav-list li {
+  width: 100%;
+  min-width: 0;
 }
 
 .nav-list a {
   display: block;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 11px 22px;
   color: #cdd8cf;
   text-decoration: none;
   font-size: 0.92rem;
   border-left: 3px solid transparent;
+  text-align: left;
+  overflow-wrap: anywhere;
 }
 
 .nav-list a:hover {
@@ -408,6 +426,36 @@ a { color: var(--forest); }
   color: var(--forest-dark);
 }
 
+.member-payment-summary {
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  margin: 20px 0;
+}
+
+.paid-summary { border-left: 3px solid #2f7d4a; }
+.unpaid-summary { border-left: 3px solid var(--clay); }
+.active-summary { border-left: 3px solid #2f7d4a; }
+.inactive-summary { border-left: 3px solid var(--clay); }
+.monthly-card { border-left: 3px solid var(--brass); }
+.fee-card { border-left: 3px solid var(--forest-light); }
+
+.money-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-num);
+  font-size: 0.82rem;
+}
+
+.paid-badge {
+  background: #e1f0e3;
+  color: #23643a;
+}
+
+.unpaid-badge {
+  background: var(--clay-soft);
+  color: var(--clay-text);
+}
+
 .stat-card {
   position: relative;
   border-left: 3px solid var(--rule-strong);
@@ -462,47 +510,80 @@ tbody tr:last-child td {
 
 .checkbox-cell {
   text-align: center;
+  min-width: 54px;
+  padding: 4px !important;
 }
 
-.checkbox-cell input[type="checkbox"] {
+.payment-toggle {
+  position: relative;
+  min-width: 46px;
+  min-height: 46px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.payment-toggle:hover {
+  background: var(--brass-soft);
+  border-color: var(--brass);
+}
+
+.payment-toggle.is-saving {
+  background: var(--paper-alt);
+  border-color: var(--brass);
+  cursor: wait;
+}
+
+.payment-toggle input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
-  width: 22px;
-  height: 22px;
-  margin: 0;
-  padding: 0;
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.payment-box {
+  width: 28px;
+  height: 28px;
   display: inline-grid;
   place-content: center;
-  vertical-align: middle;
   background: var(--paper);
   border: 2px solid var(--rule-strong);
   border-radius: var(--radius-sm);
-  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
-.checkbox-cell input[type="checkbox"]::before {
+.payment-box::before {
   content: "";
-  width: 10px;
-  height: 6px;
+  width: 12px;
+  height: 7px;
   border-left: 2px solid var(--paper);
   border-bottom: 2px solid var(--paper);
   transform: rotate(-45deg) scale(0);
   transition: transform 120ms ease-in-out;
 }
 
-.checkbox-cell input[type="checkbox"]:checked {
+.payment-toggle input[type="checkbox"]:checked + .payment-box {
   background: #2f7d4a;
   border-color: #23643a;
-  box-shadow: 0 0 0 2px rgba(47, 125, 74, 0.16);
+  box-shadow: 0 0 0 3px rgba(47, 125, 74, 0.16);
 }
 
-.checkbox-cell input[type="checkbox"]:checked::before {
+.payment-toggle input[type="checkbox"]:checked + .payment-box::before {
   transform: rotate(-45deg) scale(1);
 }
 
-.checkbox-cell input[type="checkbox"]:focus-visible {
+.payment-toggle input[type="checkbox"]:focus-visible + .payment-box {
   outline: 2px solid var(--brass);
-  outline-offset: 2px;
+  outline-offset: 3px;
+}
+
+.payment-toggle input[type="checkbox"]:disabled + .payment-box {
+  opacity: 0.65;
 }
 
 .payment-member-search {
@@ -792,14 +873,12 @@ input[type="checkbox"] {
 
 /* ---------- Responsive ---------- */
 
-@media (max-width: 880px) {
+@media (max-width: 900px) {
+  .sidebar { width: 100%; }
   .layout { flex-direction: column; }
-  .sidebar {
-    width: 100%;
-    padding: 8px 0;
-  }
   .nav-list { flex-direction: row; flex-wrap: wrap; padding: 0 12px; }
-  .nav-list a { border-left: none; border-bottom: 3px solid transparent; padding: 8px 12px; }
+  .nav-list li { flex: 1 1 0; }
+  .nav-list a { width: auto; border-left: none; border-bottom: 3px solid transparent; padding: 8px 12px; text-align: center; }
   .nav-list a.active { border-bottom-color: var(--brass); }
   .content { padding: 20px; }
   .stats-grid-four, .stats-grid-two { grid-template-columns: repeat(2, 1fr); }

@@ -62,13 +62,31 @@
           member.id,
           window.TRMSUtils.calculateMemberStatus(member.id, statusYear)
         ]));
+        const monthlySettings = (data.monthlyDueSettings || []).find((setting) => Number(setting.year) === statusYear) || data.monthlyDue || {};
+        const monthlyPaid = data.monthlyPayments
+          .filter((payment) => memberList.some((member) => Number(member.id) === Number(payment.member_id)) && Number(payment.year) === statusYear && payment.paid)
+          .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+        const monthlyObligation = memberList.length * Number(monthlySettings.yearly_due || (Number(monthlySettings.monthly_amount || 0) * 12));
+        const monthlyUnpaid = Math.max(monthlyObligation - monthlyPaid, 0);
+        const additionalPaid = data.additionalFeePayments
+          .filter((payment) => memberList.some((member) => Number(member.id) === Number(payment.member_id)) && Number(payment.year) === statusYear && payment.paid)
+          .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+        const additionalUnpaid = data.additionalFees
+          .filter((fee) => Number(fee.year) === statusYear)
+          .reduce((sum, fee) => sum + Number(fee.amount || 0) * memberList.length, 0) - additionalPaid;
         const metrics = document.getElementById('treasurerMetrics');
         metrics.innerHTML = [
           { label: 'Total Members', value: memberList.length },
-          { label: 'Active Members', value: memberList.filter((member) => memberStatuses.get(member.id)?.label === 'Active').length },
-          { label: 'Inactive Members', value: memberList.filter((member) => memberStatuses.get(member.id)?.label !== 'Active').length }
+          { label: 'Active Members', value: memberList.filter((member) => memberStatuses.get(member.id)?.label === 'Active') .length, className: 'active-summary' },
+          { label: 'Inactive Members', value: memberList.filter((member) => memberStatuses.get(member.id)?.label !== 'Active').length, className: 'inactive-summary' },
+          { label: 'Monthly Due Paid', value: window.TRMSUtils.formatMoneyShort(monthlyPaid), className: 'monthly-card' },
+          { label: 'Monthly Due Unpaid', value: window.TRMSUtils.formatMoneyShort(monthlyUnpaid), className: 'monthly-card' },
+          { label: 'Additional Fees Paid', value: window.TRMSUtils.formatMoneyShort(additionalPaid), className: 'fee-card' },
+          { label: 'Additional Fees Unpaid', value: window.TRMSUtils.formatMoneyShort(Math.max(additionalUnpaid, 0)), className: 'fee-card' },
+          { label: 'Total Paid', value: window.TRMSUtils.formatMoneyShort(monthlyPaid + additionalPaid), className: 'paid-summary' },
+          { label: 'Total Unpaid', value: window.TRMSUtils.formatMoneyShort(monthlyUnpaid + Math.max(additionalUnpaid, 0)), className: 'unpaid-summary' }
         ].map((metric) => `
-          <article class="card metric-card">
+          <article class="card metric-card ${metric.className || ''}">
             <span class="label">${metric.label}</span>
             <span class="value">${metric.value}</span>
           </article>

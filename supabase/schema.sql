@@ -157,12 +157,15 @@ DROP POLICY IF EXISTS "members_delete_access" ON public.members;
 DROP POLICY IF EXISTS "monthly_due_settings_read" ON public.monthly_due_settings;
 DROP POLICY IF EXISTS "monthly_due_settings_insert_admin" ON public.monthly_due_settings;
 DROP POLICY IF EXISTS "monthly_due_settings_update_admin" ON public.monthly_due_settings;
+DROP POLICY IF EXISTS "monthly_due_settings_delete_admin" ON public.monthly_due_settings;
 DROP POLICY IF EXISTS "monthly_payments_select_access" ON public.monthly_payments;
 DROP POLICY IF EXISTS "monthly_payments_insert_access" ON public.monthly_payments;
 DROP POLICY IF EXISTS "monthly_payments_update_access" ON public.monthly_payments;
 DROP POLICY IF EXISTS "monthly_payments_delete_access" ON public.monthly_payments;
 DROP POLICY IF EXISTS "additional_fees_read" ON public.additional_fees;
 DROP POLICY IF EXISTS "additional_fees_insert_admin" ON public.additional_fees;
+DROP POLICY IF EXISTS "additional_fees_update_admin" ON public.additional_fees;
+DROP POLICY IF EXISTS "additional_fees_delete_admin" ON public.additional_fees;
 DROP POLICY IF EXISTS "additional_fee_payments_select_access" ON public.additional_fee_payments;
 DROP POLICY IF EXISTS "additional_fee_payments_insert_access" ON public.additional_fee_payments;
 DROP POLICY IF EXISTS "additional_fee_payments_update_access" ON public.additional_fee_payments;
@@ -309,6 +312,11 @@ CREATE POLICY "monthly_due_settings_update_admin"
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
+CREATE POLICY "monthly_due_settings_delete_admin"
+  ON public.monthly_due_settings
+  FOR DELETE
+  USING (public.is_admin());
+
 CREATE POLICY "monthly_payments_select_access"
   ON public.monthly_payments
   FOR SELECT
@@ -399,6 +407,17 @@ CREATE POLICY "additional_fees_insert_admin"
   ON public.additional_fees
   FOR INSERT
   WITH CHECK (public.is_admin());
+
+CREATE POLICY "additional_fees_update_admin"
+  ON public.additional_fees
+  FOR UPDATE
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
+
+CREATE POLICY "additional_fees_delete_admin"
+  ON public.additional_fees
+  FOR DELETE
+  USING (public.is_admin());
 
 CREATE POLICY "additional_fee_payments_select_access"
   ON public.additional_fee_payments

@@ -35,7 +35,17 @@
             <p class="eyebrow">Overview</p>
             <h1>Reports</h1>
           </div>
-          <div class="header-pill">Financial snapshot</div>
+          <div class="button-group">
+            <label class="inline-controls" for="reportYearSelect">
+              <span>Year</span>
+              <select id="reportYearSelect">
+                <option value="2026">2026 Reports</option>
+                <option value="2025">2025 Reports</option>
+                <option value="2024">2024 Reports</option>
+              </select>
+            </label>
+            <button type="button" class="btn btn-primary" id="printReportsBtn">Print Reports</button>
+          </div>
         </div>
 
         <section class="grid metrics-grid" id="reportMetrics"></section>
@@ -52,35 +62,104 @@
         const data = window.TRMSAuth.getMockData();
         const metrics = document.getElementById('reportMetrics');
         const totalMembers = data.members.length;
-        const statusYear = Number(data.monthlyDue?.year || new Date().getFullYear());
-        const memberStatuses = data.members.map((member) => window.TRMSUtils.calculateMemberStatus(member.id, statusYear));
-        const activeMembers = memberStatuses.filter((status) => status.label === 'Active').length;
-        const inactiveMembers = totalMembers - activeMembers;
-        const monthlyPaid = data.monthlyPayments.filter((payment) => payment.paid).length;
-        const monthlyUnpaid = data.monthlyPayments.filter((payment) => !payment.paid).length;
-        const feePaid = data.additionalFeePayments.filter((payment) => payment.paid).length;
-        const feeUnpaid = data.additionalFeePayments.filter((payment) => !payment.paid).length;
-        const amountPaid = data.monthlyPayments.filter((payment) => payment.paid).reduce((sum, p) => sum + Number(p.amount || 0), 0);
-        const amountUnpaid = data.monthlyPayments.filter((payment) => !payment.paid).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+        const yearSelect = document.getElementById('reportYearSelect');
+        const defaultYear = Number(data.monthlyDue?.year || new Date().getFullYear());
+        yearSelect.value = String([2026, 2025, 2024].includes(defaultYear) ? defaultYear : 2026);
 
-        const cards = [
-          { label: 'Total Members', value: totalMembers },
-          { label: 'Active Members', value: activeMembers },
-          { label: 'Inactive Members', value: inactiveMembers },
-          { label: 'Monthly Paid', value: monthlyPaid },
-          { label: 'Monthly Unpaid', value: monthlyUnpaid },
-          { label: 'Additional Fees Paid', value: feePaid },
-          { label: 'Additional Fees Unpaid', value: feeUnpaid },
-          { label: 'Total Paid', value: window.TRMSUtils.formatMoneyShort(amountPaid) },
-          { label: 'Total Unpaid', value: window.TRMSUtils.formatMoneyShort(amountUnpaid) }
-        ];
+        function getReport(year) {
+          const memberStatuses = data.members.map((member) => window.TRMSUtils.calculateMemberStatus(member.id, year));
+          const activeMembers = memberStatuses.filter((status) => status.label === 'Active').length;
+          const monthlyPaid = data.monthlyPayments
+            .filter((payment) => Number(payment.year) === year && payment.paid)
+            .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+          const monthlySettings = (data.monthlyDueSettings || []).find((setting) => Number(setting.year) === year) || data.monthlyDue || {};
+          const monthlyObligation = totalMembers * Number(monthlySettings.yearly_due || (Number(monthlySettings.monthly_amount || 0) * 12));
+          const monthlyUnpaid = Math.max(monthlyObligation - monthlyPaid, 0);
+          const feeRows = data.additionalFees.filter((fee) => Number(fee.year) === year);
+          const feePaid = data.additionalFeePayments
+            .filter((payment) => Number(payment.year) === year && payment.paid)
+            .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+          const feeObligation = feeRows.reduce((sum, fee) => sum + Number(fee.amount || 0), 0) * totalMembers;
+          const feeUnpaid = Math.max(feeObligation - feePaid, 0);
+          return {
+            year,
+            activeMembers,
+            inactiveMembers: totalMembers - activeMembers,
+            monthlyPaid,
+            monthlyUnpaid,
+            feePaid,
+            feeUnpaid
+          };
+        }
 
-        metrics.innerHTML = cards.map((card) => `
-          <article class="card metric-card">
-            <span class="label">${card.label}</span>
-            <span class="value">${card.value}</span>
-          </article>
-        `).join('');
+        function renderReport() {
+          const report = getReport(Number(yearSelect.value));
+          const cards = [
+            { label: 'Total Members', value: totalMembers },
+            { label: 'Active Users', value: report.activeMembers, className: 'active-summary' },
+            { label: 'Inactive Users', value: report.inactiveMembers, className: 'inactive-summary' },
+            { label: 'Monthly Due Paid', value: window.TRMSUtils.formatMoneyShort(report.monthlyPaid), className: 'monthly-card' },
+            { label: 'Monthly Due Unpaid', value: window.TRMSUtils.formatMoneyShort(report.monthlyUnpaid), className: 'monthly-card' },
+            { label: 'Additional Fees Paid', value: window.TRMSUtils.formatMoneyShort(report.feePaid), className: 'fee-card' },
+            { label: 'Additional Fees Unpaid', value: window.TRMSUtils.formatMoneyShort(report.feeUnpaid), className: 'fee-card' }
+          ];
+          metrics.innerHTML = cards.map((card) => `
+            <article class="card metric-card ${card.className || ''}">
+              <span class="label">${card.label}</span>
+              <span class="value">${card.value}</span>
+            </article>
+          `).join('');
+          return report;
+        }
+
+        yearSelect.addEventListener('change', renderReport);
+        document.getElementById('printReportsBtn').addEventListener('click', () => {
+          const report = getReport(Number(yearSelect.value));
+          const printWindow = window.open('', '_blank', 'width=900,height=700');
+          if (!printWindow) {
+            alert('Popup blocked. Please allow pop-ups to print the report.');
+            return;
+          }
+          printWindow.document.write(`
+            <html>
+              <head>
+                <title>${report.year} Financial Report</title>
+                <style>
+                  @page { size: A4 portrait; margin: 0; }
+                  html, body { width: 210mm; min-height: 297mm; }
+                  body { box-sizing: border-box; padding: 14mm; font-family: Arial, sans-serif; color: #1b241f; }
+                  h1 { text-align: center; margin: 0 0 8px; }
+                  p { text-align: center; margin: 0 0 28px; color: #5c655d; }
+                  table { width: 100%; border-collapse: collapse; }
+                  th, td { border: 1px solid #c7bea5; padding: 12px; text-align: left; }
+                  th { background: #f1ede1; }
+                  td:last-child { text-align: right; }
+                </style>
+              </head>
+              <body>
+                <h1>TRMS FINANCIAL REPORT</h1>
+                <p>${report.year} Report</p>
+                <table>
+                  <thead><tr><th>Category</th><th>Amount</th></tr></thead>
+                  <tbody>
+                    <tr><td>Total Members</td><td>${totalMembers}</td></tr>
+                    <tr><td>Active Users</td><td>${report.activeMembers}</td></tr>
+                    <tr><td>Inactive Users</td><td>${report.inactiveMembers}</td></tr>
+                    <tr><td>Monthly Due Paid</td><td>${window.TRMSUtils.formatMoneyShort(report.monthlyPaid)}</td></tr>
+                    <tr><td>Monthly Due Unpaid</td><td>${window.TRMSUtils.formatMoneyShort(report.monthlyUnpaid)}</td></tr>
+                    <tr><td>Additional Fees Paid</td><td>${window.TRMSUtils.formatMoneyShort(report.feePaid)}</td></tr>
+                    <tr><td>Additional Fees Unpaid</td><td>${window.TRMSUtils.formatMoneyShort(report.feeUnpaid)}</td></tr>
+                  </tbody>
+                </table>
+              </body>
+            </html>
+          `);
+          printWindow.document.close();
+          printWindow.focus();
+          printWindow.print();
+        });
+
+        renderReport();
       });
     </script>
   </body>

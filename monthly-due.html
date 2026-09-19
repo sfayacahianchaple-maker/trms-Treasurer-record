@@ -22,6 +22,7 @@
           <li><a href="zones.html">Zone List</a></li>
           <li><a href="create-zone.html">Create Zone</a></li>
           <li><a href="members.html">Members</a></li>
+          <li><a href="treasurers.html">Zone Treasurers</a></li>
           <li><a class="active" href="monthly-due.html">Monthly Due</a></li>
           <li><a href="additional-fees.html">Additional Fees</a></li>
           <li><a href="payment-records.html">Payment Records</a></li>
@@ -35,34 +36,69 @@
         </div>
 
         <section class="card">
-          <div class="form-grid">
-            <div class="form-control">
-              <label for="dueYear">Year</label>
-              <input id="dueYear" type="number" value="2026" />
-            </div>
-            <div class="form-control">
-              <label for="monthlyAmount">Monthly Due</label>
-              <input id="monthlyAmount" type="number" step="0.01" value="5" />
-            </div>
-            <div class="form-control">
-              <label for="yearlyDue">Yearly Due</label>
-              <input id="yearlyDue" type="number" step="0.01" value="60" readonly />
-            </div>
-            <div class="form-control">
-              <label for="activeThreshold">Active Threshold</label>
-              <input id="activeThreshold" type="number" step="0.01" value="30" readonly />
-            </div>
+          <div id="dueFormHost">
+            <form id="dueForm">
+              <div class="form-grid">
+                <div class="form-control">
+                  <label for="dueYear">Year</label>
+                  <input id="dueYear" type="number" value="2026" />
+                </div>
+                <div class="form-control">
+                  <label for="monthlyAmount">Monthly Due</label>
+                  <input id="monthlyAmount" type="number" step="0.01" value="5" />
+                </div>
+                <div class="form-control">
+                  <label for="yearlyDue">Yearly Due</label>
+                  <input id="yearlyDue" type="number" step="0.01" value="60" readonly />
+                </div>
+                <div class="form-control">
+                  <label for="activeThreshold">Active Threshold</label>
+                  <input id="activeThreshold" type="number" step="0.01" value="30" readonly />
+                </div>
+              </div>
+              <div class="button-group button-group-spaced">
+                <button type="button" class="btn btn-primary" id="saveDueBtn">Save</button>
+                <span class="save-status" id="saveDueStatus" role="status" aria-live="polite"></span>
+              </div>
+            </form>
           </div>
-          <div class="button-group button-group-spaced">
-            <button type="button" class="btn btn-primary" id="saveDueBtn">Save</button>
-            <span class="save-status" id="saveDueStatus" role="status" aria-live="polite"></span>
+        </section>
+
+        <section class="card card-spaced-top">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Year</th>
+                  <th>Monthly Due</th>
+                  <th>Yearly Due</th>
+                  <th>Active Threshold</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="dueTableBody"></tbody>
+            </table>
           </div>
         </section>
       </main>
     </div>
 
+    <section class="modal-overlay" id="monthlyDueModal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="monthlyDueModalTitle">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">Monthly Due</p>
+            <h2 id="monthlyDueModalTitle">Add Monthly Due</h2>
+          </div>
+          <button type="button" class="modal-close" id="closeDueModalBtn" aria-label="Close monthly due form">&times;</button>
+        </div>
+        <div id="editDueFormHost"></div>
+      </div>
+    </section>
+
     <script src="js/config.js"></script>
     <script src="js/auth.js?v=20260917-3"></script>
+    <script src="js/utils.js"></script>
     <script src="js/guard.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
@@ -73,11 +109,66 @@
         const thresholdInput = document.getElementById('activeThreshold');
         const dueYearInput = document.getElementById('dueYear');
         const saveStatus = document.getElementById('saveDueStatus');
+        const dueTableBody = document.getElementById('dueTableBody');
+        const dueModal = document.getElementById('monthlyDueModal');
+        const dueForm = document.getElementById('dueForm');
+        const dueFormHost = document.getElementById('dueFormHost');
+        const editDueFormHost = document.getElementById('editDueFormHost');
+        let editingYear = null;
 
         monthlyInput.value = data.monthlyDue.monthly_amount || 5;
         yearlyInput.value = data.monthlyDue.yearly_due || 60;
         thresholdInput.value = data.monthlyDue.active_threshold || 30;
         dueYearInput.value = data.monthlyDue.year || 2026;
+
+        function renderDueRows() {
+          const currentData = window.TRMSAuth.getMockData();
+          const settings = (currentData.monthlyDueSettings || []).length
+            ? currentData.monthlyDueSettings
+            : (currentData.monthlyDue?.monthly_amount ? [currentData.monthlyDue] : []);
+          dueTableBody.innerHTML = settings.length ? settings.map((setting) => `
+            <tr>
+              <td>${setting.year}</td>
+              <td>${window.TRMSUtils.formatMoneyShort(setting.monthly_amount)}</td>
+              <td>${window.TRMSUtils.formatMoneyShort(setting.yearly_due)}</td>
+              <td>${window.TRMSUtils.formatMoneyShort(setting.active_threshold)}</td>
+              <td>
+                <div class="button-group">
+                  <button type="button" class="btn btn-secondary" data-edit-due="${setting.year}">Edit</button>
+                  <button type="button" class="btn btn-danger" data-delete-due="${setting.year}">Delete</button>
+                </div>
+              </td>
+            </tr>
+          `).join('') : '<tr><td colspan="5">No monthly due settings saved.</td></tr>';
+        }
+
+        function setEditingState(year) {
+          editingYear = year;
+          document.getElementById('saveDueBtn').textContent = year ? 'Update' : 'Save';
+          document.getElementById('monthlyDueModalTitle').textContent = year ? 'Edit Monthly Due' : 'Add Monthly Due';
+        }
+
+        function closeDueModal() {
+          const wasEditing = Boolean(editingYear);
+          dueModal.hidden = true;
+          dueFormHost.appendChild(dueForm);
+          if (wasEditing) {
+            dueYearInput.value = new Date().getFullYear();
+            monthlyInput.value = 5;
+            yearlyInput.value = 60;
+            thresholdInput.value = 30;
+          }
+          saveStatus.textContent = '';
+          saveStatus.className = 'save-status';
+          setEditingState(null);
+        }
+
+        function openDueModal(year) {
+          setEditingState(year || null);
+          editDueFormHost.appendChild(dueForm);
+          dueModal.hidden = false;
+          monthlyInput.focus();
+        }
 
         monthlyInput.addEventListener('input', () => {
           const monthly = Number(monthlyInput.value || 0);
@@ -104,12 +195,54 @@
           }
 
           saveStatus.className = 'save-status is-success';
-          saveStatus.textContent = 'Monthly due settings saved.';
+          const wasEditing = Boolean(editingYear);
+          saveStatus.textContent = wasEditing ? 'Monthly due settings updated.' : 'Monthly due settings saved.';
+          setEditingState(null);
+          await window.TRMSAuth.ready();
+          renderDueRows();
+          if (wasEditing) closeDueModal();
           window.setTimeout(() => {
             saveStatus.textContent = '';
             saveStatus.className = 'save-status';
           }, 3500);
         });
+
+        dueTableBody.addEventListener('click', async (event) => {
+          const editButton = event.target.closest('[data-edit-due]');
+          const deleteButton = event.target.closest('[data-delete-due]');
+          const year = Number(editButton?.dataset.editDue || deleteButton?.dataset.deleteDue);
+          if (!year) return;
+          const currentData = window.TRMSAuth.getMockData();
+          const setting = (currentData.monthlyDueSettings || []).find((item) => Number(item.year) === year) || currentData.monthlyDue;
+
+          if (editButton) {
+            dueYearInput.value = setting.year;
+            monthlyInput.value = setting.monthly_amount;
+            yearlyInput.value = setting.yearly_due;
+            thresholdInput.value = setting.active_threshold;
+            openDueModal(year);
+            return;
+          }
+
+          if (window.confirm(`Delete the monthly due settings for ${year}?`)) {
+            const result = await window.TRMSAuth.deleteMonthlyDueSettings(year);
+            if (!result.success) {
+              saveStatus.className = 'save-status is-error';
+              saveStatus.textContent = result.message;
+              return;
+            }
+            if (editingYear === year) setEditingState(null);
+            await window.TRMSAuth.ready();
+            renderDueRows();
+          }
+        });
+
+        document.getElementById('closeDueModalBtn').addEventListener('click', closeDueModal);
+        dueModal.addEventListener('click', (event) => {
+          if (event.target === dueModal) closeDueModal();
+        });
+
+        renderDueRows();
       });
     </script>
   </body>

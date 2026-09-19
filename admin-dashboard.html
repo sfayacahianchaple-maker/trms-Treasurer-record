@@ -78,20 +78,31 @@
         ]));
         const activeMembers = data.members.filter((member) => memberStatuses.get(member.id)?.label === 'Active').length;
         const inactiveMembers = totalMembers - activeMembers;
-        const totalPaid = data.monthlyPayments.filter((payment) => payment.paid).length * (data.monthlyDue.monthly_amount || 5);
-        const totalUnpaid = (data.monthlyPayments.filter((payment) => !payment.paid).length * (data.monthlyDue.monthly_amount || 5));
+        const monthlyPaid = data.monthlyPayments.filter((payment) => payment.paid)
+          .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+        const monthlySettings = (data.monthlyDueSettings || []).find((setting) => Number(setting.year) === statusYear) || data.monthlyDue || {};
+        const monthlyObligation = totalMembers * Number(monthlySettings.yearly_due || (Number(monthlySettings.monthly_amount || 0) * 12));
+        const monthlyUnpaid = Math.max(monthlyObligation - monthlyPaid, 0);
+        const additionalPaid = data.additionalFeePayments.filter((payment) => payment.paid)
+          .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+        const additionalUnpaid = data.additionalFeePayments.filter((payment) => !payment.paid)
+          .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
 
         const cards = [
           { label: 'Total Zones', value: totalZones },
           { label: 'Total Members', value: totalMembers },
-          { label: 'Active', value: activeMembers },
-          { label: 'Inactive', value: inactiveMembers },
-          { label: 'Total Paid', value: window.TRMSUtils.formatMoneyShort(totalPaid) },
-          { label: 'Total Unpaid', value: window.TRMSUtils.formatMoneyShort(totalUnpaid) }
+          { label: 'Active Users', value: activeMembers, className: 'active-summary' },
+          { label: 'Inactive Users', value: inactiveMembers, className: 'inactive-summary' },
+          { label: 'Monthly Due Paid', value: window.TRMSUtils.formatMoneyShort(monthlyPaid), className: 'monthly-card' },
+          { label: 'Monthly Due Unpaid', value: window.TRMSUtils.formatMoneyShort(monthlyUnpaid), className: 'monthly-card' },
+          { label: 'Additional Fees Paid', value: window.TRMSUtils.formatMoneyShort(additionalPaid), className: 'fee-card' },
+          { label: 'Additional Fees Unpaid', value: window.TRMSUtils.formatMoneyShort(additionalUnpaid), className: 'fee-card' },
+          { label: 'Total Paid', value: window.TRMSUtils.formatMoneyShort(monthlyPaid + additionalPaid), className: 'paid-summary' },
+          { label: 'Total Unpaid', value: window.TRMSUtils.formatMoneyShort(monthlyUnpaid + additionalUnpaid), className: 'unpaid-summary' }
         ];
 
         metrics.innerHTML = cards.map((card) => `
-          <article class="card metric-card">
+          <article class="card metric-card ${card.className || ''}">
             <span class="label">${card.label}</span>
             <span class="value">${card.value}</span>
           </article>

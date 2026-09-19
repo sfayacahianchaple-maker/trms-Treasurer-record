@@ -58,6 +58,8 @@
             </div>
           </div>
 
+          <div class="grid metrics-grid member-payment-summary" id="zonePaymentSummary"></div>
+
           <div class="table-wrap">
             <table>
               <thead>
@@ -65,8 +67,10 @@
                   <th>#</th>
                   <th>Member</th>
                   <th>Status</th>
-                  <th>Total Paid</th>
-                  <th>Total Unpaid</th>
+                  <th>Monthly Due Paid</th>
+                  <th>Monthly Due Unpaid</th>
+                  <th>Additional Fee Paid</th>
+                  <th>Additional Fee Unpaid</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -135,6 +139,7 @@
         const members = data.members.filter((member) => Number(member.zone_id) === Number(zone.id));
         const treasurer = data.profiles.find((profile) => Number(profile.zone_id) === Number(zone.id) && profile.role === 'zone_treasurer');
         const yearSelect = document.getElementById('zoneYearSelect');
+        const paymentSummary = document.getElementById('zonePaymentSummary');
 
         document.getElementById('zoneTitle').textContent = zone.name;
         document.getElementById('zoneTreasurerName').textContent = treasurer ? treasurer.name : 'Unassigned';
@@ -196,15 +201,16 @@
           const year = Number(yearSelect.value);
           const query = memberSearch.value.trim().toLowerCase();
           const filteredMembers = members.filter((member) => member.name.toLowerCase().includes(query));
+          const summary = { monthlyPaid: 0, monthlyUnpaid: 0, feePaid: 0, feeUnpaid: 0 };
 
           tableBody.innerHTML = filteredMembers.map((member, index) => {
             const status = window.TRMSUtils.calculateMemberStatus(member.id, year);
             const totalPaid = data.monthlyPayments
               .filter((payment) => Number(payment.member_id) === Number(member.id) && Number(payment.year) === year && payment.paid)
               .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-            const totalUnpaid = data.monthlyPayments
-              .filter((payment) => Number(payment.member_id) === Number(member.id) && Number(payment.year) === year && !payment.paid)
-              .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+            const monthlySettings = (data.monthlyDueSettings || []).find((setting) => Number(setting.year) === year) || data.monthlyDue || {};
+            const yearlyDue = Number(monthlySettings.yearly_due || (Number(monthlySettings.monthly_amount || 0) * 12));
+            const annualMonthlyUnpaid = Math.max(yearlyDue - totalPaid, 0);
             const memberFees = data.additionalFees.filter((fee) => Number(fee.year) === year);
             const paidFeeTotal = memberFees
               .filter((fee) => data.additionalFeePayments.some((payment) => Number(payment.member_id) === Number(member.id) && payment.fee_id === fee.id && Number(payment.year) === year && payment.paid))
@@ -212,18 +218,33 @@
             const unpaidFeeTotal = memberFees
               .filter((fee) => !data.additionalFeePayments.some((payment) => Number(payment.member_id) === Number(member.id) && payment.fee_id === fee.id && Number(payment.year) === year && payment.paid))
               .reduce((sum, fee) => sum + Number(fee.amount || 0), 0);
+            summary.monthlyPaid += totalPaid;
+            summary.monthlyUnpaid += annualMonthlyUnpaid;
+            summary.feePaid += paidFeeTotal;
+            summary.feeUnpaid += unpaidFeeTotal;
 
             return `
               <tr>
                 <td>${index + 1}</td>
                 <td>${member.name}</td>
                 <td><span class="${status.className}">${status.label}</span></td>
-                <td>${window.TRMSUtils.formatMoneyShort(totalPaid + paidFeeTotal)}</td>
-                <td>${window.TRMSUtils.formatMoneyShort(totalUnpaid + unpaidFeeTotal)}</td>
+                <td><span class="money-badge paid-badge">${window.TRMSUtils.formatMoneyShort(totalPaid)}</span></td>
+                <td><span class="money-badge unpaid-badge">${window.TRMSUtils.formatMoneyShort(annualMonthlyUnpaid)}</span></td>
+                <td><span class="money-badge paid-badge">${window.TRMSUtils.formatMoneyShort(paidFeeTotal)}</span></td>
+                <td><span class="money-badge unpaid-badge">${window.TRMSUtils.formatMoneyShort(unpaidFeeTotal)}</span></td>
                 <td><a class="btn btn-secondary" href="member-record.html?memberId=${member.id}&zoneId=${zoneId}&year=${year}">View Record</a></td>
               </tr>
             `;
           }).join('');
+          paymentSummary.innerHTML = [
+            { label: 'Total Paid', value: summary.monthlyPaid + summary.feePaid, className: 'paid-summary' },
+            { label: 'Total Unpaid', value: summary.monthlyUnpaid + summary.feeUnpaid, className: 'unpaid-summary' }
+          ].map((item) => `
+            <article class="card metric-card ${item.className}">
+              <span class="label">${item.label}</span>
+              <span class="value">${window.TRMSUtils.formatMoneyShort(item.value)}</span>
+            </article>
+          `).join('');
         }
 
         yearSelect.addEventListener('change', () => {

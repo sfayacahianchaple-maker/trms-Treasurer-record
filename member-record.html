@@ -189,7 +189,9 @@
               <head>
                 <title>Membership Payment Receipt</title>
                 <style>
-                  body { font-family: Arial, sans-serif; padding: 36px; color: #1b241f; }
+                  @page { size: A4 portrait; margin: 0; }
+                  html, body { width: 210mm; min-height: 297mm; }
+                  body { box-sizing: border-box; font-family: Arial, sans-serif; padding: 14mm; color: #1b241f; }
                   h1 { text-align: center; margin-bottom: 28px; }
                   h2 { margin: 26px 0 10px; font-size: 18px; }
                   .details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }

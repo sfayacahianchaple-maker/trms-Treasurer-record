@@ -44,6 +44,7 @@
 
           <div class="inline-controls payment-member-search">
             <input id="memberSearch" type="search" placeholder="Search member..." />
+            <span id="paymentSaveStatus" class="save-status" role="status" aria-live="polite"></span>
           </div>
 
           <div class="table-wrap payment-table-wrap">
@@ -107,14 +108,14 @@
             const monthlyCells = months.map((month) => {
               const match = paidMonths.find((payment) => payment.month === month);
               const checked = match?.paid === true;
-              return `<td class="checkbox-cell"><input type="checkbox" ${checked ? 'checked' : ''} aria-label="${member.name} ${month}" data-member-id="${member.id}" data-month="${month}" data-year="${year}" /></td>`;
+              return `<td class="checkbox-cell"><label class="payment-toggle"><input type="checkbox" ${checked ? 'checked' : ''} aria-label="${member.name} ${month}" data-member-id="${member.id}" data-month="${month}" data-year="${year}" /><span class="payment-box" aria-hidden="true"></span></label></td>`;
             }).join('');
 
             const feeCells = feeColumns.length
               ? feeColumns.map((fee) => {
                   const feePayment = data.additionalFeePayments.find((payment) => Number(payment.member_id) === Number(member.id) && payment.fee_id === fee.id && Number(payment.year) === year);
                   const isChecked = feePayment && feePayment.paid;
-                  return `<td class="checkbox-cell"><input type="checkbox" ${isChecked ? 'checked' : ''} aria-label="${member.name} ${fee.name}" data-member-id="${member.id}" data-fee-id="${fee.id}" data-year="${year}" /></td>`;
+                  return `<td class="checkbox-cell"><label class="payment-toggle"><input type="checkbox" ${isChecked ? 'checked' : ''} aria-label="${member.name} ${fee.name}" data-member-id="${member.id}" data-fee-id="${fee.id}" data-year="${year}" /><span class="payment-box" aria-hidden="true"></span></label></td>`;
                 }).join('')
               : '<td>—</td>';
 
@@ -132,11 +133,16 @@
           tableBody.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
             checkbox.addEventListener('change', async (event) => {
               const target = event.target;
+              const saveStatus = document.getElementById('paymentSaveStatus');
               const memberId = Number(target.dataset.memberId);
               const year = Number(target.dataset.year);
               const dataSet = window.TRMSAuth.getMockData();
               const previousChecked = !target.checked;
               let result;
+              target.disabled = true;
+              target.closest('.payment-toggle').classList.add('is-saving');
+              saveStatus.className = 'save-status is-saving';
+              saveStatus.textContent = 'Saving payment...';
 
               if (target.dataset.feeId) {
                 const feeId = target.dataset.feeId;
@@ -177,12 +183,22 @@
 
               if (!result.success) {
                 target.checked = previousChecked;
+                target.disabled = false;
+                target.closest('.payment-toggle').classList.remove('is-saving');
+                saveStatus.className = 'save-status is-error';
+                saveStatus.textContent = result.message;
                 alert(result.message);
                 return;
               }
 
               data = window.TRMSAuth.getMockData();
               renderTable();
+              saveStatus.className = 'save-status is-success';
+              saveStatus.textContent = 'Payment saved.';
+              window.setTimeout(() => {
+                saveStatus.textContent = '';
+                saveStatus.className = 'save-status';
+              }, 1800);
             });
           });
         }
