@@ -363,7 +363,15 @@
       active_threshold: settings.active_threshold
     }, { onConflict: 'year' });
 
-    if (error) return { success: false, message: error.message || 'Unable to save monthly due settings.' };
+    if (error) {
+      if (error.code === '42501') {
+        return {
+          success: false,
+          message: 'Monthly Due requires an admin Supabase profile. Set this account role to admin in public.profiles, then sign in again.'
+        };
+      }
+      return { success: false, message: error.message || 'Unable to save monthly due settings.' };
+    }
 
     const { data: members, error: membersError } = await client.from('members').select('id');
     if (membersError) return { success: false, message: membersError.message || 'Unable to load members for the monthly due.' };

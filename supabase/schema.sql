@@ -183,7 +183,8 @@ AS $$
     FROM public.profiles
     WHERE id = auth.uid()
       AND role = 'admin'
-  );
+  )
+  OR COALESCE(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'admin';
 $$;
 
 CREATE POLICY "profiles_select_own"

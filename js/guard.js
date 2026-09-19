@@ -22,6 +22,7 @@
 
     document.querySelectorAll('[data-logout]').forEach((button) => {
       button.addEventListener('click', () => {
+        if (!window.confirm('Are you sure you want to logout?')) return;
         window.TRMSAuth.logout();
         window.location.href = 'login.html';
       });
