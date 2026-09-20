@@ -121,10 +121,8 @@
         const monthSelect = document.getElementById('recordMonth');
         const body = document.getElementById('paymentRecordsBody');
         const recordYears = [...new Set([
-          ...(data.monthlyDueSettings || []).map((setting) => Number(setting.year)),
-          ...(data.monthlyPayments || []).map((payment) => Number(payment.year)),
-          ...(data.additionalFees || []).map((fee) => Number(fee.year)),
-          ...(data.additionalFeePayments || []).map((payment) => Number(payment.year))
+          ...(data.monthlyPayments || []).filter((payment) => payment.paid).map((payment) => Number(payment.year)),
+          ...(data.additionalFeePayments || []).filter((payment) => payment.paid).map((payment) => Number(payment.year))
         ].filter((year) => Number.isInteger(year)))].sort((first, second) => second - first);
         yearSelect.innerHTML = recordYears.length
           ? recordYears.map((year) => `<option value="${year}">${year}</option>`).join('')
@@ -153,6 +151,7 @@
           const rows = [];
 
           data.monthlyPayments.forEach((payment) => {
+            if (!payment.paid) return;
             if (Number(payment.year) !== selectedYear) return;
             if (selectedMonth !== 'all' && payment.month !== selectedMonth) return;
 
@@ -175,6 +174,7 @@
           });
 
           data.additionalFeePayments.forEach((payment) => {
+            if (!payment.paid) return;
             if (Number(payment.year) !== selectedYear) return;
             const member = data.members.find((item) => Number(item.id) === Number(payment.member_id));
             if (!member) return;
@@ -197,7 +197,7 @@
             });
           });
 
-          body.innerHTML = rows.map((row) => `
+          body.innerHTML = rows.length ? rows.map((row) => `
             <tr>
               <td>${row.member}</td>
               <td>${row.zone}</td>
@@ -207,7 +207,7 @@
               <td><span class="status ${row.paid ? 'active' : 'inactive'}">${row.status}</span></td>
               <td>${window.TRMSUtils.formatMoneyShort(row.amount)}</td>
             </tr>
-          `).join('');
+          `).join('') : '<tr><td colspan="7">No paid payment records found.</td></tr>';
         }
 
         [yearSelect, zoneSelect, memberSelect, monthSelect, feeSelect].forEach((control) => {
