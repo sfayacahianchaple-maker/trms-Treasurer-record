@@ -417,6 +417,11 @@ a { color: var(--forest); }
   margin-top: 16px;
 }
 
+.zone-member-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 20px 0;
+}
+
 .metric-card,
 .stat-card {
   padding: 18px 20px;
@@ -465,6 +470,10 @@ a { color: var(--forest); }
 }
 
 @media (max-width: 640px) {
+  .zone-member-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .metrics-grid:not(.member-payment-summary) {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -87,13 +87,14 @@
 
         document.getElementById('assignedZoneLabel').textContent = zone ? zone.name : 'Not assigned';
         document.getElementById('totalMembers').textContent = members.length;
-        document.getElementById('activeMembers').textContent = members.filter((member) => member.is_active).length;
-        document.getElementById('inactiveMembers').textContent = members.filter((member) => !member.is_active).length;
 
         const tableBody = document.getElementById('memberTableBody');
 
         function renderMembers() {
           const year = Number(yearSelect.value);
+          const activeCount = members.filter((member) => window.TRMSUtils.calculateMemberStatus(member.id, year).label === 'Active').length;
+          document.getElementById('activeMembers').textContent = activeCount;
+          document.getElementById('inactiveMembers').textContent = members.length - activeCount;
           const summary = { monthlyPaid: 0, monthlyUnpaid: 0, feePaid: 0, feeUnpaid: 0 };
           tableBody.innerHTML = members.map((member, index) => {
             const status = window.TRMSUtils.calculateMemberStatus(member.id, year);
