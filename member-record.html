@@ -41,11 +41,7 @@
             <a href="zones.html" class="btn btn-secondary">Back to Zone List</a>
             <div class="record-filters">
               <label for="recordYear">Year</label>
-              <select id="recordYear">
-                <option value="2026">2026</option>
-                <option value="2025">2025</option>
-                <option value="2024">2024</option>
-              </select>
+              <select id="recordYear"></select>
               <button type="button" class="btn btn-primary print-record-button" id="printReceipt">Print Receipt</button>
             </div>
           </div>
@@ -101,13 +97,20 @@
         const data = window.TRMSAuth.getMockData();
         const member = data.members.find((item) => Number(item.id) === memberId);
         const zone = data.zones.find((item) => Number(item.id) === zoneId);
+        const recordYears = [...new Set((data.monthlyDueSettings || [])
+          .map((setting) => Number(setting.year))
+          .filter((year) => Number.isInteger(year)))].sort((first, second) => second - first);
+        yearSelect.innerHTML = recordYears.length
+          ? recordYears.map((year) => `<option value="${year}">${year}</option>`).join('')
+          : '<option value="" disabled selected>Monthly Due Not Created</option>';
+        yearSelect.disabled = recordYears.length === 0;
 
         if (!member) {
           document.getElementById('memberName').textContent = 'Member record not found';
           return;
         }
 
-        yearSelect.value = String(requestedYear);
+        if (recordYears.includes(requestedYear)) yearSelect.value = String(requestedYear);
         document.getElementById('memberName').textContent = member.name;
         document.getElementById('memberMeta').textContent = `${zone ? zone.name : 'Zone'} - ${member.address || 'No address provided'} - ${member.phone || 'No phone number'}`;
 

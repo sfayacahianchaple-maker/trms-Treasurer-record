@@ -43,11 +43,7 @@
           <div class="form-grid">
             <div class="form-control">
               <label for="recordYear">Year</label>
-              <select id="recordYear">
-                <option value="2026">2026</option>
-                <option value="2025">2025</option>
-                <option value="2024">2024</option>
-              </select>
+              <select id="recordYear"></select>
             </div>
             <div class="form-control">
               <label for="recordZone">Zone</label>
@@ -124,6 +120,16 @@
         const yearSelect = document.getElementById('recordYear');
         const monthSelect = document.getElementById('recordMonth');
         const body = document.getElementById('paymentRecordsBody');
+        const recordYears = [...new Set([
+          ...(data.monthlyDueSettings || []).map((setting) => Number(setting.year)),
+          ...(data.monthlyPayments || []).map((payment) => Number(payment.year)),
+          ...(data.additionalFees || []).map((fee) => Number(fee.year)),
+          ...(data.additionalFeePayments || []).map((payment) => Number(payment.year))
+        ].filter((year) => Number.isInteger(year)))].sort((first, second) => second - first);
+        yearSelect.innerHTML = recordYears.length
+          ? recordYears.map((year) => `<option value="${year}">${year}</option>`).join('')
+          : '<option value="" disabled selected>No payment records available</option>';
+        yearSelect.disabled = recordYears.length === 0;
 
         zoneSelect.innerHTML = ['<option value="all">All Zones</option>']
           .concat(data.zones.map((zone) => `<option value="${zone.id}">${zone.name}</option>`))

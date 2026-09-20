@@ -47,11 +47,7 @@
             </div>
             <div class="inline-controls">
               <label for="zoneYearSelect">Year</label>
-              <select id="zoneYearSelect">
-                <option value="2026">2026</option>
-                <option value="2025">2025</option>
-                <option value="2024">2024</option>
-              </select>
+              <select id="zoneYearSelect"></select>
             </div>
           </div>
 
@@ -152,6 +148,13 @@
         const treasurer = data.profiles.find((profile) => Number(profile.zone_id) === Number(zone.id) && profile.role === 'zone_treasurer');
         const yearSelect = document.getElementById('zoneYearSelect');
         const paymentSummary = document.getElementById('zonePaymentSummary');
+        const zoneYears = [...new Set((data.monthlyDueSettings || [])
+          .map((setting) => Number(setting.year))
+          .filter((year) => Number.isInteger(year)))].sort((first, second) => second - first);
+        yearSelect.innerHTML = zoneYears.length
+          ? zoneYears.map((year) => `<option value="${year}">${year}</option>`).join('')
+          : '<option value="" disabled selected>Monthly Due Not Created</option>';
+        yearSelect.disabled = zoneYears.length === 0;
 
         document.getElementById('zoneTitle').textContent = zone.name;
         document.getElementById('zoneTreasurerName').textContent = treasurer ? treasurer.name : 'Unassigned';

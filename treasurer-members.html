@@ -39,11 +39,7 @@
             </div>
             <div class="inline-controls">
               <label for="memberYearSelect">Year</label>
-              <select id="memberYearSelect">
-                <option value="2026">2026</option>
-                <option value="2025">2025</option>
-                <option value="2024">2024</option>
-              </select>
+              <select id="memberYearSelect"></select>
             </div>
           </div>
 
@@ -84,6 +80,13 @@
         const members = data.members.filter((member) => Number(member.zone_id) === Number(zone.id));
         const yearSelect = document.getElementById('memberYearSelect');
         const paymentSummary = document.getElementById('memberPaymentSummary');
+        const memberYears = [...new Set((data.monthlyDueSettings || [])
+          .map((setting) => Number(setting.year))
+          .filter((year) => Number.isInteger(year)))].sort((first, second) => second - first);
+        yearSelect.innerHTML = memberYears.length
+          ? memberYears.map((year) => `<option value="${year}">${year}</option>`).join('')
+          : '<option value="" disabled selected>Monthly Due Not Created</option>';
+        yearSelect.disabled = memberYears.length === 0;
 
         document.getElementById('assignedZoneLabel').textContent = zone ? zone.name : 'Not assigned';
         document.getElementById('totalMembers').textContent = members.length;
