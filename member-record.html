@@ -155,27 +155,76 @@
 
         yearSelect.addEventListener('change', renderRecord);
         document.getElementById('printReceipt').addEventListener('click', () => {
-          const year = Number(yearSelect.value);
-          const settings = (data.monthlyDueSettings || []).find((item) => Number(item.year) === year) || data.monthlyDue || {};
-          const monthlyAmount = Number(settings.monthly_amount || 5);
-          const yearlyDue = Number(settings.yearly_due || monthlyAmount * 12);
-          const monthlyPayments = data.monthlyPayments.filter((payment) =>
-            Number(payment.member_id) === memberId && Number(payment.year) === year
+          const currentYear = new Date().getFullYear();
+          const memberStartYear = Number(member.start_year);
+          const availableYears = [
+            ...(data.monthlyDueSettings || []).map((item) => Number(item.year)),
+            ...(data.additionalFees || []).map((fee) => Number(fee.year)),
+            ...(data.monthlyPayments || []).map((payment) => Number(payment.year)),
+            ...(data.additionalFeePayments || []).map((payment) => Number(payment.year)),
+            currentYear
+          ].filter((year) => Number.isInteger(year) && year >= memberStartYear);
+          const lastReceiptYear = Math.max(...availableYears, memberStartYear);
+          const receiptYears = Array.from(
+            { length: Math.max(lastReceiptYear - memberStartYear + 1, 1) },
+            (_, index) => memberStartYear + index
           );
-          const totalYearPaid = monthlyPayments
-            .filter((payment) => payment.paid)
-            .reduce((sum, payment) => sum + Number(payment.amount || monthlyAmount), 0);
-          const totalYearUnpaid = Math.max(yearlyDue - totalYearPaid, 0);
-          const fees = data.additionalFees.filter((fee) => Number(fee.year) === year).map((fee) => {
-            const payment = data.additionalFeePayments.find((entry) =>
-              Number(entry.member_id) === memberId && entry.fee_id === fee.id && Number(entry.year) === year
+          const months = window.TRMSUtils.monthNames();
+          let totalPaidAcrossYears = 0;
+          let totalUnpaidAcrossYears = 0;
+
+          const yearSections = receiptYears.map((year) => {
+            const settings = (data.monthlyDueSettings || []).find((item) => Number(item.year) === year) || data.monthlyDue || {};
+            const monthlyAmount = Number(settings.monthly_amount || 5);
+            const yearlyDue = Number(settings.yearly_due || monthlyAmount * 12);
+            const monthlyPayments = data.monthlyPayments.filter((payment) =>
+              Number(payment.member_id) === memberId && Number(payment.year) === year
             );
-            const amount = Number(payment?.amount || fee.amount || 0);
-            return { name: fee.name, amount, paid: payment?.paid === true };
-          });
-          const totalAdditionalFees = fees.reduce((sum, fee) => sum + fee.amount, 0);
-          const additionalFeesPaid = fees.filter((fee) => fee.paid).reduce((sum, fee) => sum + fee.amount, 0);
-          const additionalFeesUnpaid = totalAdditionalFees - additionalFeesPaid;
+            const totalYearPaid = monthlyPayments
+              .filter((payment) => payment.paid)
+              .reduce((sum, payment) => sum + Number(payment.amount || monthlyAmount), 0);
+            const totalYearUnpaid = Math.max(yearlyDue - totalYearPaid, 0);
+            const fees = data.additionalFees.filter((fee) => Number(fee.year) === year).map((fee) => {
+              const payment = data.additionalFeePayments.find((entry) =>
+                Number(entry.member_id) === memberId && entry.fee_id === fee.id && Number(entry.year) === year
+              );
+              const amount = Number(payment?.amount ?? fee.amount ?? 0);
+              return { name: fee.name, amount, paid: payment?.paid === true };
+            });
+            const totalAdditionalFees = fees.reduce((sum, fee) => sum + fee.amount, 0);
+            const additionalFeesPaid = fees.filter((fee) => fee.paid).reduce((sum, fee) => sum + fee.amount, 0);
+            const additionalFeesUnpaid = totalAdditionalFees - additionalFeesPaid;
+            const totalYearPaidWithFees = totalYearPaid + additionalFeesPaid;
+            const totalYearUnpaidWithFees = totalYearUnpaid + additionalFeesUnpaid;
+            totalPaidAcrossYears += totalYearPaidWithFees;
+            totalUnpaidAcrossYears += totalYearUnpaidWithFees;
+
+            return `
+              <section class="year-section">
+                <h2>${year} PAYMENT SUMMARY</h2>
+                <h3>MONTHLY DUES</h3>
+                <table>
+                  <thead><tr><th>Month</th><th>Amount</th><th>Status</th></tr></thead>
+                  <tbody>
+                    ${months.map((month) => {
+                      const payment = monthlyPayments.find((entry) => entry.month === month);
+                      const amount = Number(payment?.amount ?? monthlyAmount);
+                      return `<tr><td>${month}</td><td>${window.TRMSUtils.formatMoneyShort(amount)}</td><td>${payment?.paid === true ? 'PAID' : 'UNPAID'}</td></tr>`;
+                    }).join('')}
+                  </tbody>
+                </table>
+                <p class="totals"><strong>Monthly Paid:</strong> ${window.TRMSUtils.formatMoneyShort(totalYearPaid)} <strong>Monthly Unpaid:</strong> ${window.TRMSUtils.formatMoneyShort(totalYearUnpaid)}</p>
+                <h3>ADDITIONAL FEES</h3>
+                <table>
+                  <thead><tr><th>Fee</th><th>Amount</th><th>Status</th></tr></thead>
+                  <tbody>
+                    ${fees.length ? fees.map((fee) => `<tr><td>${fee.name}</td><td>${window.TRMSUtils.formatMoneyShort(fee.amount)}</td><td>${fee.paid ? 'PAID' : 'UNPAID'}</td></tr>`).join('') : '<tr><td colspan="3">No additional fees</td></tr>'}
+                  </tbody>
+                </table>
+                <p class="totals"><strong>Year Total Paid:</strong> ${window.TRMSUtils.formatMoneyShort(totalYearPaidWithFees)} <strong>Year Total Unpaid:</strong> ${window.TRMSUtils.formatMoneyShort(totalYearUnpaidWithFees)}</p>
+              </section>
+            `;
+          }).join('');
           const currentUser = window.TRMSAuth.getCurrentUser();
           const adminProfile = data.profiles.find((profile) => profile.id === currentUser?.id && profile.role === 'admin');
           const zoneTreasurer = data.profiles.find((profile) =>
@@ -201,6 +250,9 @@
                   body { box-sizing: border-box; font-family: Arial, sans-serif; padding: 14mm; color: #1b241f; }
                   h1 { text-align: center; margin-bottom: 28px; }
                   h2 { margin: 26px 0 10px; font-size: 18px; }
+                  h3 { margin: 18px 0 8px; font-size: 14px; }
+                  .year-section { page-break-before: always; }
+                  .year-section:first-of-type { page-break-before: auto; }
                   .details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
                   table { width: 100%; border-collapse: collapse; margin-top: 10px; }
                   th, td { border: 1px solid #c7bea5; padding: 9px; text-align: left; }
@@ -218,31 +270,16 @@
                 <div class="details">
                   <div><strong>Member Name:</strong> ${member.name}</div>
                   <div><strong>Zone:</strong> ${zone ? zone.name : 'Unknown'}</div>
-                  <div><strong>Year:</strong> ${year}</div>
+                  <div><strong>Address:</strong> ${member.address || 'No address provided'}</div>
+                  <div><strong>Phone:</strong> ${member.phone || 'No phone number'}</div>
+                  <div><strong>Start Year:</strong> ${member.start_year}</div>
                 </div>
 
-                <h2>MONTHLY DUES</h2>
-                <table>
-                  <thead><tr><th>Yearly Due</th><th>Total Year Paid</th><th>Total Year Unpaid</th></tr></thead>
-                  <tbody><tr><td>${window.TRMSUtils.formatMoneyShort(yearlyDue)}</td><td>${window.TRMSUtils.formatMoneyShort(totalYearPaid)}</td><td>${window.TRMSUtils.formatMoneyShort(totalYearUnpaid)}</td></tr></tbody>
-                </table>
-
-                <h2>ADDITIONAL FEES</h2>
-                <table>
-                  <thead><tr><th>Fee Name</th><th>Amount</th><th>Paid/Unpaid</th></tr></thead>
-                  <tbody>
-                    ${fees.length ? fees.map((fee) => `<tr><td>${fee.name}</td><td>${window.TRMSUtils.formatMoneyShort(fee.amount)}</td><td>${fee.paid ? 'Paid' : 'Unpaid'}</td></tr>`).join('') : '<tr><td colspan="3">No additional fees</td></tr>'}
-                  </tbody>
-                </table>
-                <div class="totals">
-                  <p><strong>Total Additional Fees:</strong> ${window.TRMSUtils.formatMoneyShort(totalAdditionalFees)}</p>
-                  <p><strong>Additional Fees Paid:</strong> ${window.TRMSUtils.formatMoneyShort(additionalFeesPaid)}</p>
-                  <p><strong>Additional Fees Unpaid:</strong> ${window.TRMSUtils.formatMoneyShort(additionalFeesUnpaid)}</p>
-                </div>
+                ${yearSections}
 
                 <div class="totals">
-                  <p><strong>TOTAL PAID:</strong> ${window.TRMSUtils.formatMoneyShort(totalYearPaid + additionalFeesPaid)}</p>
-                  <p><strong>TOTAL UNPAID:</strong> ${window.TRMSUtils.formatMoneyShort(totalYearUnpaid + additionalFeesUnpaid)}</p>
+                  <p><strong>TOTAL PAID ACROSS ALL YEARS:</strong> ${window.TRMSUtils.formatMoneyShort(totalPaidAcrossYears)}</p>
+                  <p><strong>TOTAL UNPAID ACROSS ALL YEARS:</strong> ${window.TRMSUtils.formatMoneyShort(totalUnpaidAcrossYears)}</p>
                 </div>
 
                 <div class="signatures">

@@ -105,6 +105,7 @@
           const feeUnpaid = Math.max(feeObligation - feePaid, 0);
           return {
             year,
+            totalMembers,
             activeMembers,
             inactiveMembers: totalMembers - activeMembers,
             monthlyPaid,
@@ -118,7 +119,7 @@
           const report = getReport(Number(yearSelect.value));
           updateReportYearTitle();
           const cards = [
-            { label: 'Total Members', value: totalMembers },
+            { label: 'Total Members', value: report.totalMembers },
             { label: 'Active Users', value: report.activeMembers, className: 'active-summary' },
             { label: 'Inactive Users', value: report.inactiveMembers, className: 'inactive-summary' },
             { label: 'Monthly Due Paid', value: window.TRMSUtils.formatMoneyShort(report.monthlyPaid), className: 'monthly-card' },

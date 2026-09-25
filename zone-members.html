@@ -94,7 +94,7 @@
               <h2 id="recordMemberName">Member Record</h2>
               <p id="recordMemberMeta">-</p>
             </div>
-            <button type="button" class="btn btn-primary" id="printMemberRecordBtn">Print Record</button>
+            <button type="button" class="btn btn-primary" id="printMemberRecordBtn">Print Receipt</button>
           </div>
 
           <div class="record-grid">
@@ -167,6 +167,7 @@
         const monthlyRecordBody = document.getElementById('monthlyRecordBody');
         const additionalRecordBody = document.getElementById('additionalRecordBody');
         const memberSearch = document.getElementById('memberSearch');
+        const printMemberRecordButton = document.getElementById('printMemberRecordBtn');
 
         function renderMemberRecord(memberId) {
           const selectedMember = data.members.find((member) => Number(member.id) === Number(memberId));
@@ -188,6 +189,10 @@
           recordMemberName.textContent = `${selectedMember.name}`;
           recordMemberMeta.textContent = `${selectedMember.address || 'No address provided'} • ${selectedMember.phone || 'No phone number'}`;
           recordPanel.hidden = false;
+          printMemberRecordButton.onclick = () => {
+            const recordUrl = `member-record.html?memberId=${selectedMember.id}&zoneId=${zoneId}&year=${year}`;
+            window.open(recordUrl, '_blank');
+          };
 
           monthlyRecordBody.innerHTML = monthly.length
             ? monthly.map((payment) => `
