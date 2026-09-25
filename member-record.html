@@ -249,6 +249,7 @@
                   .detail-label { min-width: 72px; }
                   .summary-row { padding-left: 12px; }
                   .summary-row strong { text-align: right; white-space: nowrap; }
+                  .year-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 12mm; row-gap: 4mm; }
                   .year-section { break-inside: avoid; page-break-inside: avoid; margin-bottom: 5px; }
                   .grand-total { break-inside: avoid; page-break-inside: avoid; margin-top: 8px; }
                   .thank-you { text-align: center; margin: 10px 0; }
@@ -272,7 +273,7 @@
                   </div>
                   <div class="separator">-----------------------------------------------</div>
 
-                  ${yearSections}
+                  <div class="year-grid">${yearSections}</div>
 
                   <div class="grand-total">
                     <div class="separator">===============================================</div>
