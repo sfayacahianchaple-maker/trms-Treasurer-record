@@ -202,15 +202,18 @@
 
             return `
               <section class="year-section">
-                <div class="separator">${year}</div>
-                <div class="separator">-----------------------------------------------</div>
-                <h3>MONTHLY DUE</h3>
-                <div class="summary-row"><span>PAID</span><strong>${window.TRMSUtils.formatMoneyShort(totalYearPaid)}</strong></div>
-                <div class="summary-row"><span>UNPAID</span><strong>${window.TRMSUtils.formatMoneyShort(totalYearUnpaid)}</strong></div>
-                <h3>ADDITIONAL PAYMENTS</h3>
-                <div class="summary-row"><span>PAID</span><strong>${window.TRMSUtils.formatMoneyShort(additionalFeesPaid)}</strong></div>
-                <div class="summary-row"><span>UNPAID</span><strong>${window.TRMSUtils.formatMoneyShort(additionalFeesUnpaid)}</strong></div>
-                <div class="separator">-----------------------------------------------</div>
+                <div class="year-title"><strong>${year}</strong><span>YEARLY SUMMARY</span></div>
+                <div class="category">
+                  <div class="category-title">Monthly Due</div>
+                  <div class="summary-row"><span>Total Paid</span><strong>${window.TRMSUtils.formatMoneyShort(totalYearPaid)}</strong></div>
+                  <div class="summary-row"><span>Total Unpaid</span><strong>${window.TRMSUtils.formatMoneyShort(totalYearUnpaid)}</strong></div>
+                </div>
+                <div class="separator"></div>
+                <div class="category">
+                  <div class="category-title">Additional Payments</div>
+                  <div class="summary-row"><span>Total Paid</span><strong>${window.TRMSUtils.formatMoneyShort(additionalFeesPaid)}</strong></div>
+                  <div class="summary-row"><span>Total Unpaid</span><strong>${window.TRMSUtils.formatMoneyShort(additionalFeesUnpaid)}</strong></div>
+                </div>
               </section>
             `;
           }).join('');
@@ -234,69 +237,74 @@
               <head>
                 <title>Membership Payment Receipt</title>
                 <style>
-                  @page { size: A4 portrait; margin: 8mm; }
-                  html, body { width: auto; min-height: 281mm; }
-                  body { box-sizing: border-box; margin: 0; color: #111; background: #fff; font-family: "Courier New", Courier, monospace; font-size: 10px; line-height: 1.2; }
-                  .receipt { width: 100%; max-width: 194mm; min-height: 281mm; margin: 0 auto; }
+                  @page { size: A4 portrait; margin: 12mm; }
+                  * { box-sizing: border-box; }
+                  body { margin: 0; background: #fff; color: #222; font-family: Arial, Helvetica, sans-serif; font-size: 10.5px; line-height: 1.4; }
+                  .receipt { width: 186mm; min-height: 273mm; margin: auto; }
                   h1, h2, h3, p { margin: 0; }
-                  h1 { font-size: 16px; line-height: 1.15; text-align: center; letter-spacing: 1px; }
-                  h2 { font-size: 14px; margin: 8px 0 4px; text-align: center; }
-                  h3 { font-size: 11px; margin: 6px 0 2px; }
-                  .separator { white-space: pre; overflow: hidden; margin: 3px 0; }
-                  .receipt-title { text-align: center; margin-bottom: 8px; }
-                  .details { margin: 6px 0; }
-                  .detail-row, .summary-row { display: flex; justify-content: space-between; gap: 20px; }
-                  .detail-label { min-width: 72px; }
-                  .summary-row { padding-left: 12px; }
-                  .summary-row strong { text-align: right; white-space: nowrap; }
-                  .year-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 12mm; row-gap: 4mm; }
-                  .year-section { break-inside: avoid; page-break-inside: avoid; margin-bottom: 5px; }
-                  .year-section > .separator:first-child { text-align: center; font-weight: 700; }
-                  .year-section h3 { white-space: nowrap; }
-                  .grand-total { break-inside: avoid; page-break-inside: avoid; margin-top: 8px; }
-                  .thank-you { text-align: center; margin: 10px 0; }
-                  .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 14px; text-align: center; }
-                  .signature-line { border-top: 1px solid #111; margin-bottom: 4px; }
-                  .signature-name { font-weight: 600; }
-                  .date { margin-top: 8px; text-align: right; }
-                  @media print { .receipt { min-height: 281mm; } }
+                  .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 8px; border-bottom: 2px solid #222; }
+                  .organization { font-size: 17px; font-weight: 700; letter-spacing: .5px; }
+                  .organization-sub { font-size: 9px; color: #666; margin-top: 2px; }
+                  .receipt-title { text-align: right; }
+                  .receipt-title h1 { font-size: 18px; font-weight: 700; letter-spacing: .5px; }
+                  .receipt-title p { margin-top: 2px; font-size: 9px; color: #666; }
+                  .member-info { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid #ccc; }
+                  .info-label { display: block; font-size: 8px; color: #777; text-transform: uppercase; margin-bottom: 2px; }
+                  .info-value { font-weight: 600; font-size: 10.5px; }
+                  .year-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin-top: 12px; }
+                  .year-section { border: 1px solid #d4d4d4; border-radius: 4px; padding: 8px 10px; break-inside: avoid; page-break-inside: avoid; }
+                  .year-title { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 6px; }
+                  .year-title strong { font-size: 13px; }
+                  .year-title span { font-size: 8px; color: #777; }
+                  .category { margin-top: 5px; }
+                  .category-title { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #555; margin-bottom: 3px; }
+                  .summary-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 9.5px; }
+                  .summary-row strong { font-weight: 600; }
+                  .separator { border-top: 1px dashed #bbb; margin: 6px 0; }
+                  .grand-total { margin-top: 13px; border: 1.5px solid #222; border-radius: 5px; padding: 10px 14px; break-inside: avoid; page-break-inside: avoid; }
+                  .grand-title { font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 7px; padding-bottom: 5px; border-bottom: 1px solid #ccc; }
+                  .grand-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+                  .grand-item-title { font-size: 9px; font-weight: 700; color: #555; margin-bottom: 3px; text-transform: uppercase; }
+                  .grand-row { display: flex; justify-content: space-between; font-size: 10px; padding: 2px 0; }
+                  .total-paid { margin-top: 8px; padding-top: 7px; border-top: 1.5px solid #222; display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; }
+                  .footer-note { text-align: center; margin-top: 13px; font-size: 9px; color: #666; }
+                  .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 35mm; margin-top: 18mm; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+                  .signature-line { border-top: 1px solid #222; margin-bottom: 4px; }
+                  .signature-name { font-size: 10px; font-weight: 600; }
+                  .signature-role { font-size: 8px; color: #666; margin-top: 1px; }
+                  .print-date { text-align: right; margin-top: 8px; font-size: 8px; color: #777; }
+                  @media print { body { background: #fff; } .receipt { width: 186mm; min-height: 273mm; } .year-section, .grand-total, .signatures { break-inside: avoid; page-break-inside: avoid; } }
                 </style>
               </head>
               <body>
                 <main class="receipt">
-                  <div class="separator">===============================================</div>
-                  <div class="receipt-title"><h1>SFAYA TREASURER</h1><h1>PAYMENT RECEIPT</h1></div>
-                  <div class="separator">===============================================</div>
-                  <div class="details">
-                    <div class="detail-row"><span><span class="detail-label">MEMBER :</span> ${member.name}</span></div>
-                    <div class="detail-row"><span><span class="detail-label">ZONE   :</span> ${zone ? zone.name : 'Unknown'}</span></div>
-                    <div class="detail-row"><span><span class="detail-label">START  :</span> ${member.start_year}</span></div>
-                    <div class="detail-row"><span><span class="detail-label">DATE   :</span> ${datePrinted}</span></div>
-                  </div>
-                  <div class="separator">-----------------------------------------------</div>
-
-                  <div class="year-grid">${yearSections}</div>
-
-                  <div class="grand-total">
-                    <div class="separator">===============================================</div>
-                    <h2>GRAND TOTAL</h2>
-                    <div class="separator">===============================================</div>
-                  <h3>MONTHLY DUE</h3>
-                    <div class="summary-row"><span>TOTAL PAID</span><strong>${window.TRMSUtils.formatMoneyShort(monthlyPaidAcrossYears)}</strong></div>
-                    <div class="summary-row"><span>TOTAL UNPAID</span><strong>${window.TRMSUtils.formatMoneyShort(monthlyUnpaidAcrossYears)}</strong></div>
-                  <h3>ADDITIONAL PAYMENTS</h3>
-                    <div class="summary-row"><span>TOTAL PAID</span><strong>${window.TRMSUtils.formatMoneyShort(additionalPaidAcrossYears)}</strong></div>
-                    <div class="summary-row"><span>TOTAL UNPAID</span><strong>${window.TRMSUtils.formatMoneyShort(additionalUnpaidAcrossYears)}</strong></div>
-                    <div class="separator">-----------------------------------------------</div>
-                    <div class="summary-row"><span>TOTAL PAID ALL YEARS</span><strong>${window.TRMSUtils.formatMoneyShort(monthlyPaidAcrossYears + additionalPaidAcrossYears)}</strong></div>
-                    <div class="separator">===============================================</div>
-                  </div>
-
-                  <p class="thank-you">Thank you for your payment!</p>
+                  <header class="header">
+                    <div>
+                      <div class="organization">SFAYA TREASURER</div>
+                      <div class="organization-sub">Membership &amp; Community Contributions</div>
+                    </div>
+                    <div class="receipt-title"><h1>PAYMENT RECEIPT</h1><p>Official Record</p></div>
+                  </header>
+                  <section class="member-info">
+                    <div><span class="info-label">Member</span><span class="info-value">${member.name}</span></div>
+                    <div><span class="info-label">Zone</span><span class="info-value">${zone ? zone.name : 'Unknown'}</span></div>
+                    <div><span class="info-label">Start Year</span><span class="info-value">${member.start_year}</span></div>
+                  </section>
+                  <section class="year-grid">${yearSections}</section>
+                  <section class="grand-total">
+                    <div class="grand-title">Overall Payment Summary</div>
+                    <div class="grand-grid">
+                      <div><div class="grand-item-title">Monthly Due</div><div class="grand-row"><span>Total Paid</span><strong>${window.TRMSUtils.formatMoneyShort(monthlyPaidAcrossYears)}</strong></div><div class="grand-row"><span>Total Unpaid</span><strong>${window.TRMSUtils.formatMoneyShort(monthlyUnpaidAcrossYears)}</strong></div></div>
+                      <div><div class="grand-item-title">Additional Payments</div><div class="grand-row"><span>Total Paid</span><strong>${window.TRMSUtils.formatMoneyShort(additionalPaidAcrossYears)}</strong></div><div class="grand-row"><span>Total Unpaid</span><strong>${window.TRMSUtils.formatMoneyShort(additionalUnpaidAcrossYears)}</strong></div></div>
+                    </div>
+                    <div class="total-paid"><span>TOTAL PAID ALL YEARS</span><span>${window.TRMSUtils.formatMoneyShort(monthlyPaidAcrossYears + additionalPaidAcrossYears)}</span></div>
+                  </section>
+                  <div class="footer-note">Thank you for your contribution and continued support.</div>
                   <div class="signatures">
-                    <div><div class="signature-line"></div><div class="signature-name">${zoneTreasurer?.name || 'Zone Treasurer'}</div><div>ZONE TREASURER</div></div>
-                    <div><div class="signature-line"></div><div class="signature-name">${adminProfile?.name || currentUser?.name || 'Head Treasurer'}</div><div>HEAD TREASURER</div></div>
+                    <div><div class="signature-line"></div><div class="signature-name">${zoneTreasurer?.name || 'Zone Treasurer'}</div><div class="signature-role">Zone Treasurer</div></div>
+                    <div><div class="signature-line"></div><div class="signature-name">${adminProfile?.name || currentUser?.name || 'Head Treasurer'}</div><div class="signature-role">Head Treasurer</div></div>
                   </div>
+                  <div class="print-date">Printed: ${datePrinted}</div>
                 </main>
               </body>
             </html>
