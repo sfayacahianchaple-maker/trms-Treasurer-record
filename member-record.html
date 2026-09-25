@@ -169,9 +169,10 @@
             { length: Math.max(lastReceiptYear - memberStartYear + 1, 1) },
             (_, index) => memberStartYear + index
           );
-          const months = window.TRMSUtils.monthNames();
-          let totalPaidAcrossYears = 0;
-          let totalUnpaidAcrossYears = 0;
+          let monthlyPaidAcrossYears = 0;
+          let monthlyUnpaidAcrossYears = 0;
+          let additionalPaidAcrossYears = 0;
+          let additionalUnpaidAcrossYears = 0;
 
           const yearSections = receiptYears.map((year) => {
             const settings = (data.monthlyDueSettings || []).find((item) => Number(item.year) === year) || data.monthlyDue || {};
@@ -194,34 +195,20 @@
             const totalAdditionalFees = fees.reduce((sum, fee) => sum + fee.amount, 0);
             const additionalFeesPaid = fees.filter((fee) => fee.paid).reduce((sum, fee) => sum + fee.amount, 0);
             const additionalFeesUnpaid = totalAdditionalFees - additionalFeesPaid;
-            const totalYearPaidWithFees = totalYearPaid + additionalFeesPaid;
-            const totalYearUnpaidWithFees = totalYearUnpaid + additionalFeesUnpaid;
-            totalPaidAcrossYears += totalYearPaidWithFees;
-            totalUnpaidAcrossYears += totalYearUnpaidWithFees;
+            monthlyPaidAcrossYears += totalYearPaid;
+            monthlyUnpaidAcrossYears += totalYearUnpaid;
+            additionalPaidAcrossYears += additionalFeesPaid;
+            additionalUnpaidAcrossYears += additionalFeesUnpaid;
 
             return `
               <section class="year-section">
-                <h2>${year} PAYMENT SUMMARY</h2>
-                <h3>MONTHLY DUES</h3>
-                <table>
-                  <thead><tr><th>Month</th><th>Amount</th><th>Status</th></tr></thead>
-                  <tbody>
-                    ${months.map((month) => {
-                      const payment = monthlyPayments.find((entry) => entry.month === month);
-                      const amount = Number(payment?.amount ?? monthlyAmount);
-                      return `<tr><td>${month}</td><td>${window.TRMSUtils.formatMoneyShort(amount)}</td><td>${payment?.paid === true ? 'PAID' : 'UNPAID'}</td></tr>`;
-                    }).join('')}
-                  </tbody>
-                </table>
-                <p class="totals"><strong>Monthly Paid:</strong> ${window.TRMSUtils.formatMoneyShort(totalYearPaid)} <strong>Monthly Unpaid:</strong> ${window.TRMSUtils.formatMoneyShort(totalYearUnpaid)}</p>
-                <h3>ADDITIONAL FEES</h3>
-                <table>
-                  <thead><tr><th>Fee</th><th>Amount</th><th>Status</th></tr></thead>
-                  <tbody>
-                    ${fees.length ? fees.map((fee) => `<tr><td>${fee.name}</td><td>${window.TRMSUtils.formatMoneyShort(fee.amount)}</td><td>${fee.paid ? 'PAID' : 'UNPAID'}</td></tr>`).join('') : '<tr><td colspan="3">No additional fees</td></tr>'}
-                  </tbody>
-                </table>
-                <p class="totals"><strong>Year Total Paid:</strong> ${window.TRMSUtils.formatMoneyShort(totalYearPaidWithFees)} <strong>Year Total Unpaid:</strong> ${window.TRMSUtils.formatMoneyShort(totalYearUnpaidWithFees)}</p>
+                <h2>${year}</h2>
+                <h3>MONTHLY DUE</h3>
+                <p><strong>Total Paid:</strong> ${window.TRMSUtils.formatMoneyShort(totalYearPaid)}</p>
+                <p><strong>Total Unpaid:</strong> ${window.TRMSUtils.formatMoneyShort(totalYearUnpaid)}</p>
+                <h3>ADDITIONAL PAYMENTS</h3>
+                <p><strong>Total Paid:</strong> ${window.TRMSUtils.formatMoneyShort(additionalFeesPaid)}</p>
+                <p><strong>Total Unpaid:</strong> ${window.TRMSUtils.formatMoneyShort(additionalFeesUnpaid)}</p>
               </section>
             `;
           }).join('');
@@ -278,8 +265,13 @@
                 ${yearSections}
 
                 <div class="totals">
-                  <p><strong>TOTAL PAID ACROSS ALL YEARS:</strong> ${window.TRMSUtils.formatMoneyShort(totalPaidAcrossYears)}</p>
-                  <p><strong>TOTAL UNPAID ACROSS ALL YEARS:</strong> ${window.TRMSUtils.formatMoneyShort(totalUnpaidAcrossYears)}</p>
+                  <h2>GRAND TOTAL - ALL YEARS</h2>
+                  <h3>MONTHLY DUE</h3>
+                  <p><strong>Total Paid:</strong> ${window.TRMSUtils.formatMoneyShort(monthlyPaidAcrossYears)}</p>
+                  <p><strong>Total Unpaid:</strong> ${window.TRMSUtils.formatMoneyShort(monthlyUnpaidAcrossYears)}</p>
+                  <h3>ADDITIONAL PAYMENTS</h3>
+                  <p><strong>Total Paid:</strong> ${window.TRMSUtils.formatMoneyShort(additionalPaidAcrossYears)}</p>
+                  <p><strong>Total Unpaid:</strong> ${window.TRMSUtils.formatMoneyShort(additionalUnpaidAcrossYears)}</p>
                 </div>
 
                 <div class="signatures">
