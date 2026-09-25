@@ -8,7 +8,10 @@
   </head>
   <body data-role="admin" class="app-shell">
     <header class="topbar">
-      <div class="brand">TRMS</div>
+      <div class="brand">
+        <img class="brand__img" src="assets/logo.png" alt="TRMS logo" />
+        <span>TRMS</span>
+      </div>
       <div class="topbar-meta">
         <span class="user-chip" data-user-name>Head Treasurer</span>
         <button class="btn btn-secondary" data-logout>Logout</button>
@@ -17,6 +20,10 @@
 
     <div class="layout">
       <aside class="sidebar">
+        <div class="sidebar-brand" aria-label="TRMS brand">
+          <img class="sidebar-brand__img" src="assets/logo.png" alt="TRMS logo" />
+          <span class="sidebar-brand__text">TRMS</span>
+        </div>
         <ul class="nav-list">
           <li><a href="admin-dashboard.html">Dashboard</a></li>
           <li><a class="active" href="zones.html">Zone List</a></li>

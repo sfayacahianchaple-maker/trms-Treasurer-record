@@ -8,7 +8,10 @@
   </head>
   <body data-role="admin" class="app-shell record-page">
     <header class="topbar">
-      <div class="brand">TRMS</div>
+      <div class="brand">
+        <img class="brand__img" src="assets/logo.png" alt="TRMS logo" />
+        <span>TRMS</span>
+      </div>
       <div class="topbar-meta">
         <span class="user-chip" data-user-name>Head Treasurer</span>
         <button class="btn btn-secondary" data-logout>Logout</button>
@@ -101,6 +104,7 @@
         const data = window.TRMSAuth.getMockData();
         const member = data.members.find((item) => Number(item.id) === memberId);
         const zone = data.zones.find((item) => Number(item.id) === zoneId);
+        const logoUrl = new URL('assets/logo.png', window.location.href).href;
         const recordYears = [...new Set((data.monthlyDueSettings || [])
           .map((setting) => Number(setting.year))
           .filter((year) => Number.isInteger(year)))].sort((first, second) => second - first);
@@ -243,6 +247,8 @@
                   .receipt { width: 186mm; min-height: 273mm; margin: auto; }
                   h1, h2, h3, p { margin: 0; }
                   .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 8px; border-bottom: 2px solid #222; }
+                  .organization-brand { display: flex; align-items: center; gap: 8px; }
+                  .organization-logo { width: 24mm; height: 24mm; object-fit: contain; }
                   .organization { font-size: 17px; font-weight: 700; letter-spacing: .5px; }
                   .organization-sub { font-size: 9px; color: #666; margin-top: 2px; }
                   .receipt-title { text-align: right; }
@@ -279,9 +285,12 @@
               <body>
                 <main class="receipt">
                   <header class="header">
-                    <div>
+                    <div class="organization-brand">
+                      <img class="organization-logo" src="${logoUrl}" alt="TRMS logo" />
+                      <div>
                       <div class="organization">SFAYA TREASURER</div>
                       <div class="organization-sub">Membership &amp; Community Contributions</div>
+                      </div>
                     </div>
                     <div class="receipt-title"><h1>PAYMENT RECEIPT</h1><p>Official Record</p></div>
                   </header>
