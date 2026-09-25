@@ -89,9 +89,12 @@
           const monthlyPaid = data.monthlyPayments
             .filter((payment) => Number(payment.year) === year && payment.paid)
             .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-          const monthlyUnpaid = data.monthlyPayments
-            .filter((payment) => Number(payment.year) === year && !payment.paid)
+          const monthlySettings = (data.monthlyDueSettings || []).find((setting) => Number(setting.year) === year) || data.monthlyDue || {};
+          const monthlyObligation = totalMembers * Number(monthlySettings.monthly_amount || 0);
+          const paidMonthlyAmount = data.monthlyPayments
+            .filter((payment) => Number(payment.year) === year && payment.paid)
             .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+          const monthlyUnpaidAmount = Math.max(monthlyObligation - paidMonthlyAmount, 0);
           const feeRows = data.additionalFees.filter((fee) => Number(fee.year) === year);
           const feePaid = data.additionalFeePayments
             .filter((payment) => Number(payment.year) === year && payment.paid)
@@ -103,7 +106,7 @@
             activeMembers,
             inactiveMembers: totalMembers - activeMembers,
             monthlyPaid,
-            monthlyUnpaid,
+            monthlyUnpaid: monthlyUnpaidAmount,
             feePaid,
             feeUnpaid
           };
