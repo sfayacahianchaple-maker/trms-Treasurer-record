@@ -39,7 +39,7 @@
         <div class="page-header page-header--split">
           <div>
             <p class="eyebrow">Overview</p>
-            <h1>Reports</h1>
+            <h1>Reports <span id="reportYearTitle"></span></h1>
           </div>
           <div class="button-group">
             <label class="inline-controls" for="reportYearSelect">
@@ -75,6 +75,13 @@
           ? reportYears.map((year) => `<option value="${year}">${year} Reports</option>`).join('')
           : '<option value="" disabled selected>No reports available</option>';
         yearSelect.disabled = reportYears.length === 0;
+        if (reportYears.includes(new Date().getFullYear())) {
+          yearSelect.value = String(new Date().getFullYear());
+        }
+
+        function updateReportYearTitle() {
+          document.getElementById('reportYearTitle').textContent = yearSelect.value ? ` ${yearSelect.value}` : '';
+        }
 
         function getReport(year) {
           const memberStatuses = data.members.map((member) => window.TRMSUtils.calculateMemberStatus(member.id, year));
@@ -82,9 +89,9 @@
           const monthlyPaid = data.monthlyPayments
             .filter((payment) => Number(payment.year) === year && payment.paid)
             .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-          const monthlySettings = (data.monthlyDueSettings || []).find((setting) => Number(setting.year) === year) || data.monthlyDue || {};
-          const monthlyObligation = totalMembers * Number(monthlySettings.yearly_due || (Number(monthlySettings.monthly_amount || 0) * 12));
-          const monthlyUnpaid = Math.max(monthlyObligation - monthlyPaid, 0);
+          const monthlyUnpaid = data.monthlyPayments
+            .filter((payment) => Number(payment.year) === year && !payment.paid)
+            .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
           const feeRows = data.additionalFees.filter((fee) => Number(fee.year) === year);
           const feePaid = data.additionalFeePayments
             .filter((payment) => Number(payment.year) === year && payment.paid)
@@ -104,6 +111,7 @@
 
         function renderReport() {
           const report = getReport(Number(yearSelect.value));
+          updateReportYearTitle();
           const cards = [
             { label: 'Total Members', value: totalMembers },
             { label: 'Active Users', value: report.activeMembers, className: 'active-summary' },

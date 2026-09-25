@@ -5,8 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const totalMembers = data.members.length;
   const activeMembers = data.members.filter((member) => member.is_active).length;
   const inactiveMembers = data.members.filter((member) => !member.is_active).length;
-  const totalPaid = data.monthlyPayments.filter((payment) => payment.paid).reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const totalUnpaid = data.monthlyPayments.filter((payment) => !payment.paid).reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const currentYear = new Date().getFullYear();
+  const totalPaid = data.monthlyPayments
+    .filter((payment) => Number(payment.year) === currentYear && payment.paid)
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const totalUnpaid = data.monthlyPayments
+    .filter((payment) => Number(payment.year) === currentYear && !payment.paid)
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
   window.__TRMS_DASHBOARD = {
     totalZones,
