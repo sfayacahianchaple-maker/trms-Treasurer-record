@@ -87,7 +87,8 @@
         const monthlyPaid = data.monthlyPayments.filter((payment) => Number(payment.year) === statusYear && payment.paid)
           .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
         const monthlySettings = (data.monthlyDueSettings || []).find((setting) => Number(setting.year) === statusYear) || data.monthlyDue || {};
-        const monthlyObligation = totalMembers * Number(monthlySettings.monthly_amount || 0);
+        const yearPerMember = Number(monthlySettings.yearly_due || (Number(monthlySettings.monthly_amount || 0) * 12));
+        const monthlyObligation = totalMembers * yearPerMember;
         const paidMonthlyAmount = data.monthlyPayments
           .filter((payment) => Number(payment.year) === statusYear && payment.paid)
           .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
