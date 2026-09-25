@@ -65,7 +65,7 @@
 
     <script src="js/config.js"></script>
     <script src="js/auth.js?v=20260917-9"></script>
-    <script src="js/utils.js?v=20260917-5"></script>
+    <script src="js/utils.js?v=20260925-1"></script>
     <script src="js/guard.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
@@ -76,13 +76,14 @@
         document.getElementById('dashboardYear').textContent = new Date().getFullYear();
 
         const totalZones = data.zones.length;
-        const totalMembers = data.members.length;
         const statusYear = new Date().getFullYear();
-        const memberStatuses = new Map(data.members.map((member) => [
+        const yearMembers = data.members.filter((member) => window.TRMSUtils.memberStartedByYear(member, statusYear));
+        const totalMembers = yearMembers.length;
+        const memberStatuses = new Map(yearMembers.map((member) => [
           member.id,
           window.TRMSUtils.calculateMemberStatus(member.id, statusYear)
         ]));
-        const activeMembers = data.members.filter((member) => memberStatuses.get(member.id)?.label === 'Active').length;
+        const activeMembers = yearMembers.filter((member) => memberStatuses.get(member.id)?.label === 'Active').length;
         const inactiveMembers = totalMembers - activeMembers;
         const monthlyPaid = data.monthlyPayments.filter((payment) => Number(payment.year) === statusYear && payment.paid)
           .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
@@ -119,7 +120,7 @@
         `).join('');
 
         summaryTable.innerHTML = data.zones.map((zone) => {
-          const zoneMembers = data.members.filter((member) => Number(member.zone_id) === Number(zone.id));
+          const zoneMembers = yearMembers.filter((member) => Number(member.zone_id) === Number(zone.id));
           const zoneTreasurer = data.profiles.find((profile) => Number(profile.zone_id) === Number(zone.id) && profile.role === 'zone_treasurer');
           const activeZoneMembers = zoneMembers.filter((member) => memberStatuses.get(member.id)?.label === 'Active').length;
           return `

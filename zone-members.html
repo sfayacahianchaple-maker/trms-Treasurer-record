@@ -136,7 +136,7 @@
 
     <script src="js/config.js"></script>
     <script src="js/auth.js?v=20260917-8"></script>
-    <script src="js/utils.js?v=20260917-4"></script>
+    <script src="js/utils.js?v=20260925-1"></script>
     <script src="js/guard.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
@@ -213,10 +213,12 @@
         function renderMembers() {
           const year = Number(yearSelect.value);
           const query = memberSearch.value.trim().toLowerCase();
-          const filteredMembers = members.filter((member) => member.name.toLowerCase().includes(query));
-          const activeCount = members.filter((member) => window.TRMSUtils.calculateMemberStatus(member.id, year).label === 'Active').length;
+          const yearMembers = members.filter((member) => window.TRMSUtils.memberStartedByYear(member, year));
+          const filteredMembers = yearMembers.filter((member) => member.name.toLowerCase().includes(query));
+          const activeCount = yearMembers.filter((member) => window.TRMSUtils.calculateMemberStatus(member.id, year).label === 'Active').length;
           document.getElementById('activeMembers').textContent = activeCount;
-          document.getElementById('inactiveMembers').textContent = members.length - activeCount;
+          document.getElementById('totalMembers').textContent = yearMembers.length;
+          document.getElementById('inactiveMembers').textContent = yearMembers.length - activeCount;
           const summary = { monthlyPaid: 0, monthlyUnpaid: 0, feePaid: 0, feeUnpaid: 0 };
 
           tableBody.innerHTML = filteredMembers.map((member, index) => {

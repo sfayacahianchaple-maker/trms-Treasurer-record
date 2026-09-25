@@ -49,7 +49,7 @@
 
     <script src="js/config.js"></script>
     <script src="js/auth.js?v=20260917-9"></script>
-    <script src="js/utils.js?v=20260917-5"></script>
+    <script src="js/utils.js?v=20260925-1"></script>
     <script src="js/guard.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
@@ -61,8 +61,10 @@
         document.getElementById('welcomeTitle').textContent = `Welcome, ${user.name}`;
         document.getElementById('assignedZoneLabel').textContent = zone ? zone.name : 'Not assigned';
 
-        const memberList = data.members.filter((member) => Number(member.zone_id) === Number(zoneId));
         const statusYear = Number(data.monthlyDue?.year || new Date().getFullYear());
+        const memberList = data.members.filter((member) =>
+          Number(member.zone_id) === Number(zoneId) && window.TRMSUtils.memberStartedByYear(member, statusYear)
+        );
         const memberStatuses = new Map(memberList.map((member) => [
           member.id,
           window.TRMSUtils.calculateMemberStatus(member.id, statusYear)

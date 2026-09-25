@@ -38,6 +38,10 @@
     };
   }
 
+  function memberStartedByYear(member, year) {
+    return Number(member.start_year) <= Number(year);
+  }
+
   function getQueryParam(name) {
     const params = new URLSearchParams(window.location.search);
     return params.get(name);
@@ -47,6 +51,7 @@
     formatMoneyShort,
     monthNames,
     calculateMemberStatus,
+    memberStartedByYear,
     getQueryParam
   };
 })();

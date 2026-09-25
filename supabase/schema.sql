@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS public.members (
   name TEXT NOT NULL,
   address TEXT,
   phone TEXT,
+  start_year INTEGER NOT NULL,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -86,6 +87,18 @@ BEGIN
       ON DELETE SET NULL;
   END IF;
 END $$;
+
+ALTER TABLE public.members
+  ADD COLUMN IF NOT EXISTS start_year INTEGER;
+
+UPDATE public.members
+SET start_year = EXTRACT(YEAR FROM created_at)::INTEGER
+WHERE start_year IS NULL;
+
+ALTER TABLE public.members
+  ALTER COLUMN start_year SET NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_members_start_year ON public.members(start_year);
 
 DO $$
 BEGIN

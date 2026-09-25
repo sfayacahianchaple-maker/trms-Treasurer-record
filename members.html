@@ -37,6 +37,10 @@
       <main class="content">
         <div class="page-header">
           <h1>Members</h1>
+          <div class="inline-controls">
+            <label for="memberYearSelect">Year</label>
+            <select id="memberYearSelect"></select>
+          </div>
         </div>
 
         <section class="card card-spaced-bottom">
@@ -57,6 +61,10 @@
             <div class="form-control">
               <label for="memberZone">Assigned Zone</label>
               <select id="memberZone"></select>
+            </div>
+            <div class="form-control">
+              <label for="memberStartYear">Start Year</label>
+              <input id="memberStartYear" type="number" min="1900" max="2100" required />
             </div>
             <div class="form-control form-actions-end">
               <div class="button-group">
@@ -92,6 +100,10 @@
                 <label for="editMemberZone">Assigned Zone</label>
                 <select id="editMemberZone"></select>
               </div>
+              <div class="form-control">
+                <label for="editMemberStartYear">Start Year</label>
+                <input id="editMemberStartYear" type="number" min="1900" max="2100" required />
+              </div>
               <div class="modal-actions">
                 <button type="button" class="btn btn-secondary" id="cancelEditMember">Cancel</button>
                 <button type="submit" class="btn btn-primary">Update Member</button>
@@ -108,6 +120,7 @@
                   <th>ID</th>
                   <th>Name</th>
                   <th>Zone</th>
+                  <th>Start Year</th>
                   <th>Status</th>
                   <th>Action</th>
                 </tr>
@@ -121,14 +134,16 @@
 
     <script src="js/config.js"></script>
     <script src="js/auth.js?v=20260917-8"></script>
-    <script src="js/utils.js?v=20260917-4"></script>
+    <script src="js/utils.js?v=20260925-1"></script>
     <script src="js/guard.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
         await window.TRMSAuth.ready();
+        const data = window.TRMSAuth.getMockData();
         const body = document.getElementById('membersTableBody');
         const form = document.getElementById('addMemberForm');
         const zoneSelect = document.getElementById('memberZone');
+        const yearSelect = document.getElementById('memberYearSelect');
         const editModal = document.getElementById('editMemberModal');
         const editForm = document.getElementById('editMemberForm');
         const editZoneSelect = document.getElementById('editMemberZone');
@@ -142,8 +157,9 @@
 
         function renderMembers() {
           const data = window.TRMSAuth.getMockData();
-          const year = Number(data.monthlyDue?.year || new Date().getFullYear());
-          body.innerHTML = data.members.map((member) => {
+          const year = Number(yearSelect.value);
+          const visibleMembers = data.members.filter((member) => window.TRMSUtils.memberStartedByYear(member, year));
+          body.innerHTML = visibleMembers.map((member) => {
             const zone = data.zones.find((item) => Number(item.id) === Number(member.zone_id));
             const status = window.TRMSUtils.calculateMemberStatus(member.id, year);
             return `
@@ -151,6 +167,7 @@
                 <td>${member.id}</td>
                 <td>${member.name}</td>
                 <td>${zone ? zone.name : 'Unknown'}</td>
+                <td>${member.start_year}</td>
                 <td><span class="${status.className}">${status.label}</span></td>
                 <td>
                   <div class="button-group">
@@ -175,10 +192,11 @@
           const address = document.getElementById('memberAddress').value.trim();
           const phone = document.getElementById('memberPhone').value.trim();
           const zoneId = Number(zoneSelect.value);
+          const startYear = Number(document.getElementById('memberStartYear').value);
 
-          if (!name || !zoneId) return;
+          if (!name || !zoneId || !Number.isInteger(startYear) || startYear < 1900 || startYear > 2100) return;
 
-          const result = await window.TRMSAuth.createMember({ zone_id: zoneId, name, address, phone, is_active: true });
+          const result = await window.TRMSAuth.createMember({ zone_id: zoneId, name, address, phone, start_year: startYear, is_active: true });
 
           if (!result.success) {
             window.alert(result.message);
@@ -195,7 +213,8 @@
             zone_id: Number(editZoneSelect.value),
             name: document.getElementById('editMemberName').value.trim(),
             address: document.getElementById('editMemberAddress').value.trim(),
-            phone: document.getElementById('editMemberPhone').value.trim()
+            phone: document.getElementById('editMemberPhone').value.trim(),
+            start_year: Number(document.getElementById('editMemberStartYear').value)
           });
 
           if (!result.success) {
@@ -226,6 +245,7 @@
             document.getElementById('editMemberName').value = member.name || '';
             document.getElementById('editMemberAddress').value = member.address || '';
             document.getElementById('editMemberPhone').value = member.phone || '';
+            document.getElementById('editMemberStartYear').value = member.start_year || '';
             editZoneSelect.value = String(member.zone_id);
             editModal.hidden = false;
             document.getElementById('editMemberName').focus();
@@ -249,6 +269,16 @@
         });
 
         populateZones();
+        const memberYears = [...new Set([
+          ...(data.monthlyDueSettings || []).map((setting) => Number(setting.year)),
+          ...data.members.map((member) => Number(member.start_year))
+        ].filter((year) => Number.isInteger(year)))].sort((first, second) => second - first);
+        const currentYear = new Date().getFullYear();
+        if (!memberYears.includes(currentYear)) memberYears.unshift(currentYear);
+        yearSelect.innerHTML = memberYears.map((year) => `<option value="${year}">${year}</option>`).join('');
+        yearSelect.value = String(Number(data.monthlyDue?.year) || currentYear);
+        yearSelect.addEventListener('change', renderMembers);
+        document.getElementById('memberStartYear').value = currentYear;
         renderMembers();
       });
     </script>

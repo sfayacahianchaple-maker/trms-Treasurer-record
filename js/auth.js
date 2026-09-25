@@ -244,12 +244,16 @@
   async function createMember(member) {
     const client = await ensureSupabaseClient();
     if (!client) return { success: false, message: 'Supabase is not configured.' };
+    if (!Number.isInteger(Number(member.start_year)) || Number(member.start_year) < 1900 || Number(member.start_year) > 2100) {
+      return { success: false, message: 'Start Year must be a whole year between 1900 and 2100.' };
+    }
 
     const { error } = await client.from('members').insert({
       zone_id: member.zone_id,
       name: member.name,
       address: member.address || null,
       phone: member.phone || null,
+      start_year: member.start_year,
       is_active: member.is_active !== false
     });
 
@@ -261,6 +265,9 @@
   async function updateMember(memberId, updates) {
     const client = await ensureSupabaseClient();
     if (!client) return { success: false, message: 'Supabase is not configured.' };
+    if (!Number.isInteger(Number(updates.start_year)) || Number(updates.start_year) < 1900 || Number(updates.start_year) > 2100) {
+      return { success: false, message: 'Start Year must be a whole year between 1900 and 2100.' };
+    }
 
     const { error } = await client
       .from('members')
@@ -268,7 +275,8 @@
         zone_id: updates.zone_id,
         name: updates.name,
         address: updates.address || null,
-        phone: updates.phone || null
+        phone: updates.phone || null,
+        start_year: updates.start_year
       })
       .eq('id', memberId);
 
@@ -373,7 +381,10 @@
       return { success: false, message: error.message || 'Unable to save monthly due settings.' };
     }
 
-    const { data: members, error: membersError } = await client.from('members').select('id');
+    const { data: members, error: membersError } = await client
+      .from('members')
+      .select('id, start_year')
+      .lte('start_year', settings.year);
     if (membersError) return { success: false, message: membersError.message || 'Unable to load members for the monthly due.' };
 
     const { data: existingPayments, error: paymentsError } = await client
@@ -425,7 +436,10 @@
 
     if (error) return { success: false, message: error.message || 'Unable to create additional fee.' };
 
-    const { data: members, error: membersError } = await client.from('members').select('id');
+    const { data: members, error: membersError } = await client
+      .from('members')
+      .select('id')
+      .lte('start_year', fee.year);
     if (membersError) return { success: false, message: membersError.message || 'Unable to load members for the additional fee.' };
     const paymentRows = (members || []).map((member) => ({
       fee_id: fee.id,

@@ -137,9 +137,17 @@
           .concat(data.zones.map((zone) => `<option value="${zone.id}">${zone.name}</option>`))
           .join('');
 
-        memberSelect.innerHTML = ['<option value="all">All Members</option>']
-          .concat(data.members.map((member) => `<option value="${member.id}">${member.name}</option>`))
-          .join('');
+        function populateMemberOptions(year) {
+          const selectedMember = memberSelect.value;
+          memberSelect.innerHTML = ['<option value="all">All Members</option>']
+            .concat(data.members
+              .filter((member) => window.TRMSUtils.memberStartedByYear(member, year))
+              .map((member) => `<option value="${member.id}">${member.name}</option>`))
+            .join('');
+          if ([...memberSelect.options].some((option) => option.value === selectedMember)) {
+            memberSelect.value = selectedMember;
+          }
+        }
 
         feeSelect.innerHTML = ['<option value="all">All Fees</option>']
           .concat(data.additionalFees.map((fee) => `<option value="${fee.id}">${fee.name} (${fee.year})</option>`))
@@ -147,6 +155,7 @@
 
         function renderRecords() {
           const selectedYear = Number(yearSelect.value);
+          populateMemberOptions(selectedYear);
           const selectedZone = zoneSelect.value;
           const selectedMember = memberSelect.value;
           const selectedMonth = monthSelect.value;
@@ -217,6 +226,8 @@
         [yearSelect, zoneSelect, memberSelect, monthSelect, feeSelect].forEach((control) => {
           control.addEventListener('change', renderRecords);
         });
+
+        populateMemberOptions(Number(yearSelect.value));
 
         const printReceiptButton = document.getElementById('printReceiptBtn');
         if (printReceiptButton) printReceiptButton.addEventListener('click', () => {
