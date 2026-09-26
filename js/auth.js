@@ -7,9 +7,9 @@
   function isSupabaseConfigured() {
     return !!(
       CONFIG.supabaseUrl &&
-      CONFIG.supabaseUrl !== 'https://qxmrlhqlevgaovpbbokb.supabase.co' &&
+      CONFIG.supabaseUrl !== 'https://YOUR_PROJECT_REF.supabase.co' &&
       CONFIG.supabaseAnonKey &&
-      CONFIG.supabaseAnonKey !== 'sb_publishable_himJSbQhktKC2-RzEhXgVQ_rzZkmlnV'
+      CONFIG.supabaseAnonKey !== 'YOUR_SUPABASE_ANON_KEY'
     );
   }
 
