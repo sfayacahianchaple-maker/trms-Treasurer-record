@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="assets/logo.png" />
     <link rel="stylesheet" href="css/style.css?v=20260917-7" />
   </head>
-  <body data-role="zone_treasurer" class="app-shell">
+  <body class="app-shell">
     <header class="topbar">
       <div class="brand">TRMS</div>
       <div class="topbar-meta">
@@ -59,16 +59,20 @@
     </div>
 
     <script src="js/config.js"></script>
-    <script src="js/auth.js?v=20260917-8"></script>
+    <script src="js/auth.js?v=20260926-1"></script>
     <script src="js/utils.js?v=20260925-1"></script>
     <script src="js/guard.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
         await window.TRMSAuth.ready();
         const user = window.TRMSAuth.getCurrentUser();
+        if (!['admin', 'zone_treasurer'].includes(user?.role)) {
+          window.location.href = 'login.html';
+          return;
+        }
         const zoneId = user?.zone_id;
         let data = window.TRMSAuth.getMockData();
-        const memberList = data.members.filter((member) => Number(member.zone_id) === Number(zoneId));
+        const memberList = data.members.filter((member) => user.role === 'admin' || Number(member.zone_id) === Number(zoneId));
         const yearSelect = document.getElementById('yearSelect');
         const memberSearch = document.getElementById('memberSearch');
         const tableBody = document.getElementById('treasurerTableBody');
@@ -167,6 +171,7 @@
                 const paymentMatch = dataSet.additionalFeePayments.find((item) => Number(item.member_id) === memberId && item.fee_id === feeId && Number(item.year) === year);
 
                 const fee = dataSet.additionalFees.find((item) => item.id === feeId);
+                const wasPaid = paymentMatch?.paid === true;
                 if (paymentMatch) {
                   paymentMatch.paid = target.checked;
                 } else if (fee) {
@@ -178,11 +183,13 @@
                   fee_id: feeId,
                   year,
                   paid: target.checked,
+                  was_paid: wasPaid,
                   amount: fee?.amount || paymentMatch?.amount || 0
                 });
               } else {
                 const month = target.dataset.month;
                 const paymentMatch = dataSet.monthlyPayments.find((item) => Number(item.member_id) === memberId && item.month === month && Number(item.year) === year);
+                const wasPaid = paymentMatch?.paid === true;
 
                 if (paymentMatch) {
                   paymentMatch.paid = target.checked;
@@ -195,6 +202,7 @@
                   year,
                   month,
                   paid: target.checked,
+                  was_paid: wasPaid,
                   amount: paymentMatch?.amount || dataSet.monthlyDue.monthly_amount || 5
                 });
               }
@@ -212,7 +220,17 @@
               data = window.TRMSAuth.getMockData();
               renderTable();
               saveStatus.className = 'save-status is-success';
-              saveStatus.textContent = 'Payment saved.';
+              if (result.smsStatus === 'sent') {
+                saveStatus.textContent = 'Payment recorded successfully. SMS sent.';
+              } else if (result.smsStatus === 'no_phone') {
+                saveStatus.textContent = 'Payment recorded. No phone number; SMS not sent.';
+              } else if (result.smsStatus === 'failed') {
+                saveStatus.textContent = 'Payment recorded, but SMS notification failed.';
+              } else if (result.smsStatus === 'duplicate') {
+                saveStatus.textContent = 'Payment recorded successfully. SMS already processed.';
+              } else {
+                saveStatus.textContent = 'Payment saved.';
+              }
               window.setTimeout(() => {
                 saveStatus.textContent = '';
                 saveStatus.className = 'save-status';

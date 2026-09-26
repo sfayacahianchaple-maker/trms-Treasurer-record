@@ -56,7 +56,7 @@
               <input id="memberAddress" type="text" placeholder="Street, Barangay" />
             </div>
             <div class="form-control">
-              <label for="memberPhone">Phone</label>
+              <label for="memberPhone">Phone Number (Optional)</label>
               <input id="memberPhone" type="tel" placeholder="0917-123-4567" />
             </div>
             <div class="form-control">
@@ -94,7 +94,7 @@
                 <input id="editMemberAddress" type="text" />
               </div>
               <div class="form-control">
-                <label for="editMemberPhone">Phone</label>
+                <label for="editMemberPhone">Phone Number (Optional)</label>
                 <input id="editMemberPhone" type="tel" />
               </div>
               <div class="form-control">
@@ -120,6 +120,7 @@
                 <tr>
                   <th>ID</th>
                   <th>Name</th>
+                  <th>Phone</th>
                   <th>Zone</th>
                   <th>Start Year</th>
                   <th>Status</th>
@@ -134,7 +135,7 @@
     </div>
 
     <script src="js/config.js"></script>
-    <script src="js/auth.js?v=20260917-8"></script>
+    <script src="js/auth.js?v=20260926-1"></script>
     <script src="js/utils.js?v=20260925-1"></script>
     <script src="js/guard.js"></script>
     <script>
@@ -167,6 +168,7 @@
               <tr>
                 <td>${member.id}</td>
                 <td>${member.name}</td>
+                <td>${member.phone || '—'}</td>
                 <td>${zone ? zone.name : 'Unknown'}</td>
                 <td>${member.start_year}</td>
                 <td><span class="${status.className}">${status.label}</span></td>
