@@ -559,15 +559,7 @@
 
     if (error) return { success: false, message: error.message || 'Unable to save monthly payment.' };
     await hydrateSupabaseCache();
-    const smsStatus = payment.paid && !payment.was_paid
-      ? await requestPaymentSms(client, {
-          payment_type: 'monthly',
-          member_id: payment.member_id,
-          year: payment.year,
-          month: payment.month
-        })
-      : null;
-    return { success: true, smsStatus };
+    return { success: true };
   }
 
   async function saveAdditionalFeePayment(payment) {
@@ -587,28 +579,7 @@
 
     if (error) return { success: false, message: error.message || 'Unable to save additional fee payment.' };
     await hydrateSupabaseCache();
-    const smsStatus = payment.paid && !payment.was_paid
-      ? await requestPaymentSms(client, {
-          payment_type: 'additional',
-          member_id: payment.member_id,
-          fee_id: payment.fee_id,
-          year: payment.year
-        })
-      : null;
-    return { success: true, smsStatus };
-  }
-
-  async function requestPaymentSms(client, payment) {
-    try {
-      const { data, error } = await client.functions.invoke('send-payment-sms', { body: payment });
-      if (error) return 'failed';
-      return ['sent', 'failed', 'no_phone', 'duplicate'].includes(data?.status)
-        ? data.status
-        : 'failed';
-    } catch (error) {
-      console.error('Payment SMS request failed.', error);
-      return 'failed';
-    }
+    return { success: true };
   }
 
   async function ready() {

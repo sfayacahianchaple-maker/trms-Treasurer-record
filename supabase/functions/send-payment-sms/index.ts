@@ -59,6 +59,7 @@ function hasProviderError(payload: unknown) {
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (request.method !== 'POST') return respond(405, { status: 'failed', error: 'Method not allowed.' });
+  return respond(200, { status: 'disabled', message: 'SMS notifications are disabled.' });
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
