@@ -23,8 +23,8 @@
 
         <form id="loginForm" class="auth-form">
           <div class="form-control">
-            <label for="email" id="emailLabel">Admin Email / Username</label>
-            <input id="email" name="email" type="text" placeholder="admin@yourdomain.com" required />
+            <label for="email" id="emailLabel">Admin Email</label>
+            <input id="email" name="email" type="email" placeholder="admin@yourdomain.com" autocomplete="username" required />
           </div>
 
           <div class="form-control">
@@ -58,10 +58,10 @@
           });
 
           if (role === 'admin') {
-            emailLabel.textContent = 'Admin Email / Username';
+            emailLabel.textContent = 'Admin Email';
             emailInput.placeholder = 'admin@yourdomain.com';
           } else {
-            emailLabel.textContent = 'Zone User Email / Username';
+            emailLabel.textContent = 'Zone User Email';
             emailInput.placeholder = 'zone@yourdomain.com';
           }
         }
@@ -75,7 +75,13 @@
           const email = document.getElementById('email').value;
           const password = document.getElementById('password').value;
 
-          const result = await window.TRMSAuth.login({ email, password });
+          let result;
+          try {
+            result = await window.TRMSAuth.login({ email, password });
+          } catch (error) {
+            message.textContent = error.message || 'Unable to connect to Supabase. Check your internet connection and try again.';
+            return;
+          }
           if (!result.success) {
             message.textContent = result.message;
             return;

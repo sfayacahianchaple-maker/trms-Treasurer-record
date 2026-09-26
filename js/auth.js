@@ -592,7 +592,7 @@
     }
   }
 
-  window.TRMSAuth = {
+  console.log("TRMS AUTH JS LOADED"); window.TRMSAuth = {
     getMockData,
     saveMockData,
     resetMockData,
@@ -621,3 +621,4 @@
 
   window.alert = showAlert;
 })();
+

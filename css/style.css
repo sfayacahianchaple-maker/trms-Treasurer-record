@@ -977,9 +977,9 @@ input[type="checkbox"] {
 @media (max-width: 900px) {
   .sidebar { width: 100%; }
   .layout { flex-direction: column; }
-  .nav-list { flex-direction: row; flex-wrap: wrap; padding: 0 12px; }
-  .nav-list li { flex: 1 1 0; }
-  .nav-list a { width: auto; border-left: none; border-bottom: 3px solid transparent; padding: 8px 12px; text-align: center; }
+  .nav-list { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; padding: 0 12px 4px; gap: 6px; }
+  .nav-list li { flex: 0 0 auto; width: auto; }
+  .nav-list a { width: auto; border-left: none; border-bottom: 3px solid transparent; padding: 8px 12px; text-align: center; white-space: nowrap; }
   .nav-list a.active { border-bottom-color: var(--brass); }
   .content { padding: 20px; }
   .stats-grid-four, .stats-grid-two { grid-template-columns: repeat(2, 1fr); }
@@ -1013,6 +1013,37 @@ input[type="checkbox"] {
 
   .zone-header {
     gap: 12px;
+  }
+
+  .page-header .button-group {
+    width: 100%;
+  }
+
+  .page-header .button-group .inline-controls {
+    flex: 1 1 120px;
+  }
+
+  .page-header .button-group .btn {
+    flex: 1 1 140px;
+    justify-content: center;
+  }
+
+  .record-page .record-actions {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .record-page .record-filters {
+    flex-wrap: wrap;
+  }
+
+  .record-page .record-filters select {
+    flex: 1 1 120px;
+  }
+
+  .record-page .record-filters .btn {
+    flex: 1 1 140px;
+    justify-content: center;
   }
 
   .zone-header .inline-controls,

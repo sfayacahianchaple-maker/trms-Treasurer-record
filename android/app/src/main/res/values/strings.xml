@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Treasurer Record Management System</string>
+    <string name="title_activity_main">Treasurer Record Management System</string>
+    <string name="package_name">com.sfaya.trms</string>
+    <string name="custom_url_scheme">com.sfaya.trms</string>
+</resources>
