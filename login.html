@@ -32,11 +32,6 @@
             <input id="password" name="password" type="password" placeholder="Password" required />
           </div>
 
-          <div class="login-remember">
-            <input id="stayLoggedIn" name="stayLoggedIn" type="checkbox" />
-            <label for="stayLoggedIn">Stay logged in</label>
-          </div>
-
           <button type="submit" class="btn btn-primary">Login</button>
           <div id="loginMessage" class="empty-state login-message"></div>
         </form>
@@ -44,14 +39,13 @@
     </main>
 
     <script src="js/config.js"></script>
-    <script src="js/auth.js?v=20261018-2"></script>
+    <script src="js/auth.js?v=20261018-3"></script>
     <script>
       document.addEventListener('DOMContentLoaded', () => {
         const form = document.getElementById('loginForm');
         const message = document.getElementById('loginMessage');
         const emailInput = document.getElementById('email');
         const emailLabel = document.getElementById('emailLabel');
-        const stayLoggedInInput = document.getElementById('stayLoggedIn');
         const roleButtons = document.querySelectorAll('.auth-role-btn');
         let selectedRole = 'admin';
 
@@ -89,7 +83,7 @@
 
           let result;
           try {
-            result = await window.TRMSAuth.login({ email, password, stayLoggedIn: stayLoggedInInput.checked });
+            result = await window.TRMSAuth.login({ email, password });
           } catch (error) {
             message.textContent = error.message || 'Unable to connect to Supabase. Check your internet connection and try again.';
             return;

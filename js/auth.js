@@ -3,15 +3,6 @@
    anon key in js/config.js before using the app. */
 (function () {
   const CONFIG = window.TRMS_CONFIG || {};
-  const REMEMBER_SESSION_KEY = 'trms_remember_session_v1';
-
-  function shouldPersistSession() {
-    return localStorage.getItem(REMEMBER_SESSION_KEY) !== 'false';
-  }
-
-  function getSessionStorage() {
-    return shouldPersistSession() ? localStorage : sessionStorage;
-  }
 
   function isSupabaseConfigured() {
     return !!(
@@ -23,8 +14,9 @@
   }
 
   let supabaseLoader = null;
+  let supabaseClient = null;
 
-  async function ensureSupabaseClient(persistSession = shouldPersistSession()) {
+  async function ensureSupabaseClient() {
     if (!isSupabaseConfigured()) {
       return null;
     }
@@ -50,12 +42,16 @@
       await supabaseLoader;
     }
 
-    return window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey, {
-      auth: {
-        persistSession,
-        storage: persistSession ? localStorage : sessionStorage
-      }
-    });
+    if (!supabaseClient) {
+      supabaseClient = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          storage: sessionStorage
+        }
+      });
+    }
+
+    return supabaseClient;
   }
 
   function emptyDataSet() {
@@ -136,9 +132,8 @@
     overlay.querySelector('[data-alert-close]').focus();
   }
 
-  async function login({ email, password, stayLoggedIn = true }) {
-    localStorage.setItem(REMEMBER_SESSION_KEY, String(stayLoggedIn));
-    const client = await ensureSupabaseClient(stayLoggedIn);
+  async function login({ email, password }) {
+    const client = await ensureSupabaseClient();
     if (!client) {
       return {
         success: false,
@@ -189,9 +184,8 @@
       zone_id: profile?.zone_id ?? metadata.zone_id ?? null
     };
 
-    const sessionStorageArea = stayLoggedIn ? localStorage : sessionStorage;
-    sessionStorageArea.setItem(CONFIG.sessionKey, JSON.stringify(session));
-    (stayLoggedIn ? sessionStorage : localStorage).removeItem(CONFIG.sessionKey);
+    sessionStorage.setItem(CONFIG.sessionKey, JSON.stringify(session));
+    localStorage.removeItem(CONFIG.sessionKey);
     return { success: true, user: session };
   }
 
@@ -216,7 +210,7 @@
   }
 
   function getCurrentUser() {
-    const raw = getSessionStorage().getItem(CONFIG.sessionKey || 'trms_session_v1');
+    const raw = sessionStorage.getItem(CONFIG.sessionKey || 'trms_session_v1');
     if (!raw) return null;
 
     try {
@@ -237,15 +231,22 @@
       return;
     }
 
+    const { data: authData, error: authError } = await client.auth.getSession();
+    if (authError || !authData.session) {
+      return;
+    }
+
     const tables = ['zones', 'members', 'profiles', 'monthly_due_settings', 'monthly_payments', 'additional_fees', 'additional_fee_payments', 'wedding_fees'];
     const data = {};
 
     for (const table of tables) {
       const { data: rows, error } = await client.from(table).select('*');
-      if (!error) {
-        const dataKey = table === 'monthly_due_settings' ? 'monthlyDue' : table === 'wedding_fees' ? 'weddingFees' : table;
-        data[dataKey] = rows || [];
+      if (error) {
+        console.error(`Unable to load ${table}; keeping the existing data cache.`, error);
+        return;
       }
+      const dataKey = table === 'monthly_due_settings' ? 'monthlyDue' : table === 'wedding_fees' ? 'weddingFees' : table;
+      data[dataKey] = rows || [];
     }
 
     const monthlyDueSettings = Array.isArray(data.monthlyDue) ? data.monthlyDue : [];
