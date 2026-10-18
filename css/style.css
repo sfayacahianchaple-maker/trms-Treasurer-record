@@ -1247,7 +1247,7 @@ input[type="checkbox"] {
     border-bottom: 1px solid var(--forest);
   }
   .layout { flex: 0 0 auto; flex-direction: column; }
-  .nav-list { flex-direction: row; flex-wrap: wrap; padding: 0 12px 4px; gap: 6px; }
+  .nav-list { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; padding: 0 12px 4px; gap: 6px; }
   .nav-list li { flex: 0 0 auto; width: auto; }
   .nav-list .nav-section { flex: 0 0 auto; width: auto; align-self: center; padding: 8px 6px; border: 0; white-space: nowrap; }
   .nav-list a { width: auto; border-left: none; border-bottom: 3px solid transparent; padding: 8px 12px; text-align: center; white-space: nowrap; }
