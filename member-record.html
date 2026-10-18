@@ -6,6 +6,7 @@
     <title>Member Record</title>
     <link rel="stylesheet" href="css/style.css?v=20260916-6" />
       <link rel="icon" type="image/png" href="assets/logo.png" />
+    <script src="js/admin-navigation.js" defer></script>
   </head>
   <body data-role="admin" class="app-shell record-page">
     <header class="topbar">
@@ -27,9 +28,11 @@
           <li><a class="active" href="zones.html">Zone List</a></li>
           <li><a href="create-zone.html">Create Zone</a></li>
           <li><a href="members.html">Members</a></li>
+          <li><a href="archives.html">Archives</a></li>
           <li><a href="treasurers.html">Zone Treasurers</a></li>
           <li><a href="monthly-due.html">Monthly Due</a></li>
           <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="wedding-fees.html">Wedding Fees</a></li>
           <li><a href="payment-records.html">Payment Records</a></li>
           <li><a href="reports.html">Reports</a></li>
         </ul>
@@ -47,7 +50,14 @@
             <div class="record-filters">
               <label for="recordYear">Year</label>
               <select id="recordYear"></select>
-              <button type="button" class="btn btn-primary print-record-button" id="printReceipt">Print Receipt</button>
+              <div class="receipt-print-group" role="group" aria-labelledby="receiptPrintLabel">
+                <span class="receipt-print-label" id="receiptPrintLabel">Print</span>
+                <div class="button-group">
+                  <button type="button" class="btn btn-primary print-record-button" id="printReceipt">Member Receipt</button>
+                  <button type="button" class="btn btn-primary print-record-button" id="printWeddingReceipt">Wedding Receipt</button>
+                </div>
+              </div>
+              <button type="button" class="btn btn-danger print-record-button" id="archiveMember">Archive Member</button>
             </div>
           </div>
         </div>
@@ -83,6 +93,22 @@
             </table>
           </div>
         </section>
+
+        <section class="card record-block card-spaced-top">
+          <h2>Wedding Fee</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Amount</th>
+                  <th>Year</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="weddingRecordBody"></tbody>
+            </table>
+          </div>
+        </section>
       </main>
     </div>
 
@@ -98,13 +124,19 @@
         const memberId = Number(params.get('memberId'));
         const zoneId = Number(params.get('zoneId') || 1);
         const yearSelect = document.getElementById('recordYear');
+        const archiveButton = document.getElementById('archiveMember');
         const requestedYear = Number(params.get('year')) || new Date().getFullYear();
         const data = window.TRMSAuth.getMockData();
         const member = data.members.find((item) => Number(item.id) === memberId);
         const zone = data.zones.find((item) => Number(item.id) === zoneId);
         const logoUrl = new URL('assets/logo.png', window.location.href).href;
-        const recordYears = [...new Set((data.monthlyDueSettings || [])
-          .map((setting) => Number(setting.year))
+        const recordYears = [...new Set([
+          ...(data.monthlyDueSettings || []).map((setting) => Number(setting.year)),
+          ...(data.additionalFees || []).map((fee) => Number(fee.year)),
+          ...(data.weddingFees || [])
+            .filter((fee) => Number(fee.member_id) === memberId)
+            .map((fee) => Number(fee.year))
+        ]
           .filter((year) => Number.isInteger(year)))].sort((first, second) => second - first);
         yearSelect.innerHTML = recordYears.length
           ? recordYears.map((year) => `<option value="${year}">${year}</option>`).join('')
@@ -115,6 +147,8 @@
           document.getElementById('memberName').textContent = 'Member record not found';
           return;
         }
+
+        archiveButton.hidden = member.archived_at != null;
 
         if (recordYears.includes(requestedYear)) yearSelect.value = String(requestedYear);
         document.getElementById('memberName').textContent = member.name;
@@ -133,6 +167,9 @@
               );
               return { ...fee, paid: payment?.paid === true, amount: Number(payment?.amount ?? fee.amount ?? 0) };
             });
+          const weddingFee = (data.weddingFees || []).find((fee) =>
+            Number(fee.member_id) === memberId && Number(fee.year) === year
+          );
 
           document.getElementById('monthlyRecordBody').innerHTML = monthly.length
             ? monthly.map((payment) => `
@@ -153,10 +190,21 @@
                   </tr>
                 `).join('')
             : '<tr><td colspan="3">No additional fee records found.</td></tr>';
+              document.getElementById('weddingRecordBody').innerHTML = weddingFee
+                ? `<tr><td>${window.TRMSUtils.formatMoneyShort(weddingFee.amount)}</td><td>${weddingFee.year}</td><td><span class="status ${weddingFee.paid ? 'active' : 'inactive'}">${weddingFee.paid ? 'Paid' : 'Unpaid'}</span></td></tr>`
+                : '<tr><td colspan="3">No wedding fee records found.</td></tr>';
         }
 
         yearSelect.addEventListener('change', renderRecord);
-        document.getElementById('printReceipt').addEventListener('click', () => {
+        function printReceipt(includeWeddingFee) {
+          const selectedYear = Number(yearSelect.value);
+          const weddingFee = (data.weddingFees || []).find((fee) =>
+            Number(fee.member_id) === memberId && Number(fee.year) === selectedYear
+          );
+          if (includeWeddingFee && (!weddingFee || !weddingFee.paid)) {
+            window.alert(weddingFee ? 'Mark the Wedding Fee as paid in Payment Management before printing this receipt.' : 'No Wedding Fee exists for this member and year.');
+            return;
+          }
           const currentYear = new Date().getFullYear();
           const memberStartYear = Number(member.start_year);
           const availableYears = [
@@ -164,6 +212,7 @@
             ...(data.additionalFees || []).map((fee) => Number(fee.year)),
             ...(data.monthlyPayments || []).map((payment) => Number(payment.year)),
             ...(data.additionalFeePayments || []).map((payment) => Number(payment.year)),
+            ...(includeWeddingFee ? [selectedYear] : []),
             currentYear
           ].filter((year) => Number.isInteger(year) && year >= memberStartYear);
           const lastReceiptYear = Math.max(...availableYears, memberStartYear);
@@ -175,6 +224,7 @@
           let monthlyUnpaidAcrossYears = 0;
           let additionalPaidAcrossYears = 0;
           let additionalUnpaidAcrossYears = 0;
+          let weddingFeePaidAcrossYears = 0;
 
           const yearSections = receiptYears.map((year) => {
             const settings = (data.monthlyDueSettings || []).find((item) => Number(item.year) === year) || data.monthlyDue || {};
@@ -197,10 +247,14 @@
             const totalAdditionalFees = fees.reduce((sum, fee) => sum + fee.amount, 0);
             const additionalFeesPaid = fees.filter((fee) => fee.paid).reduce((sum, fee) => sum + fee.amount, 0);
             const additionalFeesUnpaid = totalAdditionalFees - additionalFeesPaid;
+            const yearWeddingFee = includeWeddingFee && year === selectedYear ? weddingFee : null;
+            const yearWeddingFeePaid = yearWeddingFee?.paid ? Number(yearWeddingFee.amount || 0) : 0;
+            const yearWeddingFeeUnpaid = yearWeddingFee && !yearWeddingFee.paid ? Number(yearWeddingFee.amount || 0) : 0;
             monthlyPaidAcrossYears += totalYearPaid;
             monthlyUnpaidAcrossYears += totalYearUnpaid;
             additionalPaidAcrossYears += additionalFeesPaid;
             additionalUnpaidAcrossYears += additionalFeesUnpaid;
+            weddingFeePaidAcrossYears += yearWeddingFeePaid;
 
             return `
               <section class="year-section">
@@ -216,6 +270,14 @@
                   <div class="summary-row"><span>Total Paid</span><strong>${window.TRMSUtils.formatMoneyShort(additionalFeesPaid)}</strong></div>
                   <div class="summary-row"><span>Total Unpaid</span><strong>${window.TRMSUtils.formatMoneyShort(additionalFeesUnpaid)}</strong></div>
                 </div>
+                ${yearWeddingFee ? `
+                  <div class="separator"></div>
+                  <div class="category">
+                    <div class="category-title">Wedding Fee</div>
+                    <div class="summary-row"><span>Total Paid</span><strong>${window.TRMSUtils.formatMoneyShort(yearWeddingFeePaid)}</strong></div>
+                    <div class="summary-row"><span>Total Unpaid</span><strong>${window.TRMSUtils.formatMoneyShort(yearWeddingFeeUnpaid)}</strong></div>
+                  </div>
+                ` : ''}
               </section>
             `;
           }).join('');
@@ -237,7 +299,7 @@
           receiptWindow.document.write(`
             <html>
               <head>
-                <title>Membership Payment Receipt</title>
+                <title>${includeWeddingFee ? 'Wedding ' : ''}Membership Payment Receipt</title>
                 <style>
                   @page { size: A4 portrait; margin: 12mm; }
                   * { box-sizing: border-box; }
@@ -268,6 +330,7 @@
                   .grand-total { margin-top: 13px; border: 1.5px solid #222; border-radius: 5px; padding: 10px 14px; break-inside: avoid; page-break-inside: avoid; }
                   .grand-title { font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 7px; padding-bottom: 5px; border-bottom: 1px solid #ccc; }
                   .grand-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+                  .grand-grid.wedding-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
                   .grand-item-title { font-size: 9px; font-weight: 700; color: #555; margin-bottom: 3px; text-transform: uppercase; }
                   .grand-row { display: flex; justify-content: space-between; font-size: 10px; padding: 2px 0; }
                   .total-paid { margin-top: 8px; padding-top: 7px; border-top: 1.5px solid #222; display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; }
@@ -277,10 +340,13 @@
                   .signature-name { font-size: 10px; font-weight: 600; }
                   .signature-role { font-size: 8px; color: #666; margin-top: 1px; }
                   .print-date { text-align: right; margin-top: 8px; font-size: 8px; color: #777; }
-                  @media print { body { background: #fff; } .receipt { width: 186mm; min-height: 273mm; } .year-section, .grand-total, .signatures { break-inside: avoid; page-break-inside: avoid; } }
+                  .receipt-actions { display: flex; justify-content: flex-end; width: min(186mm, calc(100% - 32px)); margin: 16px auto 10px; }
+                  .receipt-actions button { border: 1px solid #aaa; border-radius: 4px; padding: 9px 16px; background: #fff; color: #222; font: inherit; cursor: pointer; }
+                  @media print { body { background: #fff; } .receipt-actions { display: none; } .receipt { width: 186mm; min-height: 273mm; } .year-section, .grand-total, .signatures { break-inside: avoid; page-break-inside: avoid; } }
                 </style>
               </head>
               <body>
+                <div class="receipt-actions"><button type="button" onclick="window.close()">Back</button></div>
                 <main class="receipt">
                   <header class="header">
                     <div class="organization-brand">
@@ -290,7 +356,7 @@
                       <div class="organization-sub">Membership &amp; Community Contributions</div>
                       </div>
                     </div>
-                    <div class="receipt-title"><h1>PAYMENT RECEIPT</h1><p>Official Record</p></div>
+                    <div class="receipt-title"><h1>${includeWeddingFee ? 'WEDDING ' : ''}PAYMENT RECEIPT</h1><p>Official Record</p></div>
                   </header>
                   <section class="member-info">
                     <div><span class="info-label">Member</span><span class="info-value">${member.name}</span></div>
@@ -300,11 +366,12 @@
                   <section class="year-grid">${yearSections}</section>
                   <section class="grand-total">
                     <div class="grand-title">Overall Payment Summary</div>
-                    <div class="grand-grid">
+                    <div class="grand-grid ${includeWeddingFee ? 'wedding-summary' : ''}">
                       <div><div class="grand-item-title">Monthly Due</div><div class="grand-row"><span>Total Paid</span><strong>${window.TRMSUtils.formatMoneyShort(monthlyPaidAcrossYears)}</strong></div><div class="grand-row"><span>Total Unpaid</span><strong>${window.TRMSUtils.formatMoneyShort(monthlyUnpaidAcrossYears)}</strong></div></div>
                       <div><div class="grand-item-title">Additional Payments</div><div class="grand-row"><span>Total Paid</span><strong>${window.TRMSUtils.formatMoneyShort(additionalPaidAcrossYears)}</strong></div><div class="grand-row"><span>Total Unpaid</span><strong>${window.TRMSUtils.formatMoneyShort(additionalUnpaidAcrossYears)}</strong></div></div>
+                      ${includeWeddingFee ? `<div><div class="grand-item-title">Wedding Fee</div><div class="grand-row"><span>Total Paid</span><strong>${window.TRMSUtils.formatMoneyShort(weddingFeePaidAcrossYears)}</strong></div><div class="grand-row"><span>Total Unpaid</span><strong>${window.TRMSUtils.formatMoneyShort(0)}</strong></div></div>` : ''}
                     </div>
-                    <div class="total-paid"><span>TOTAL PAID ALL YEARS</span><span>${window.TRMSUtils.formatMoneyShort(monthlyPaidAcrossYears + additionalPaidAcrossYears)}</span></div>
+                    <div class="total-paid"><span>TOTAL PAID ALL YEARS</span><span>${window.TRMSUtils.formatMoneyShort(monthlyPaidAcrossYears + additionalPaidAcrossYears + weddingFeePaidAcrossYears)}</span></div>
                   </section>
                   <div class="footer-note">Thank you for your contribution and continued support.</div>
                   <div class="signatures">
@@ -319,6 +386,18 @@
           receiptWindow.document.close();
           receiptWindow.focus();
           receiptWindow.print();
+        }
+
+        document.getElementById('printReceipt').addEventListener('click', () => printReceipt(false));
+        document.getElementById('printWeddingReceipt').addEventListener('click', () => printReceipt(true));
+        archiveButton.addEventListener('click', async () => {
+          if (!window.confirm(`Archive ${member.name}? The member and all payment history will remain available in Archives.`)) return;
+          const result = await window.TRMSAuth.archiveMember(memberId);
+          if (!result.success) {
+            window.alert(result.message);
+            return;
+          }
+          window.location.href = 'archives.html';
         });
 
         renderRecord();

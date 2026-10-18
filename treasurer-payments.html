@@ -6,6 +6,7 @@
     <title>Payment Management</title>
     <link rel="icon" type="image/png" href="assets/logo.png" />
     <link rel="stylesheet" href="css/style.css?v=20260917-7" />
+    <script src="js/admin-navigation.js" defer></script>
   </head>
   <body class="app-shell">
     <header class="topbar">
@@ -22,11 +23,7 @@
           <img class="sidebar-brand__img" src="assets/logo.png" alt="TRMS logo" />
           <span class="sidebar-brand__text">TRMS</span>
         </div>
-        <ul class="nav-list">
-          <li><a href="treasurer-dashboard.html">Dashboard</a></li>
-          <li><a href="treasurer-members.html">My Members</a></li>
-          <li><a class="active" href="treasurer-payments.html">Payment Management</a></li>
-        </ul>
+        <ul class="nav-list" id="paymentNavigation"></ul>
       </aside>
 
       <main class="content">
@@ -70,9 +67,32 @@
           window.location.href = 'login.html';
           return;
         }
+        const isAdmin = user.role === 'admin';
         const zoneId = user?.zone_id;
         let data = window.TRMSAuth.getMockData();
-        const memberList = data.members.filter((member) => user.role === 'admin' || Number(member.zone_id) === Number(zoneId));
+        const memberList = isAdmin
+          ? data.members.filter((member) => member.archived_at == null)
+          : data.members.filter((member) => member.archived_at == null && Number(member.zone_id) === Number(zoneId));
+        document.getElementById('paymentNavigation').innerHTML = isAdmin
+          ? `
+              <li><a href="admin-dashboard.html">Dashboard</a></li>
+              <li><a href="zones.html">Zone List</a></li>
+              <li><a href="create-zone.html">Create Zone</a></li>
+              <li><a href="members.html">Members</a></li>
+              <li><a href="archives.html">Archives</a></li>
+              <li><a href="treasurers.html">Zone Treasurers</a></li>
+              <li><a href="monthly-due.html">Monthly Due</a></li>
+              <li><a href="additional-fees.html">Additional Fees</a></li>
+              <li><a href="wedding-fees.html">Wedding Fees</a></li>
+              <li><a class="active" href="treasurer-payments.html">Payment Management</a></li>
+              <li><a href="payment-records.html">Payment Records</a></li>
+              <li><a href="reports.html">Reports</a></li>
+            `
+          : `
+              <li><a href="treasurer-dashboard.html">Dashboard</a></li>
+              <li><a href="treasurer-members.html">My Members</a></li>
+              <li><a class="active" href="treasurer-payments.html">Payment Management</a></li>
+            `;
         const yearSelect = document.getElementById('yearSelect');
         const memberSearch = document.getElementById('memberSearch');
         const tableBody = document.getElementById('treasurerTableBody');
@@ -80,8 +100,10 @@
         const months = window.TRMSUtils.monthNames();
 
         function populateYearOptions() {
-          const years = [...new Set((data.monthlyDueSettings || [])
-            .map((setting) => Number(setting.year))
+          const years = [...new Set([
+            ...(data.monthlyDueSettings || []).map((setting) => Number(setting.year)),
+            ...(data.weddingFees || []).map((fee) => Number(fee.year))
+          ]
             .filter((year) => Number.isInteger(year)))]
             .sort((first, second) => second - first);
           yearSelect.innerHTML = years.length
@@ -93,6 +115,7 @@
         function renderHeader(year) {
           const monthlyDue = (data.monthlyDueSettings || []).find((setting) => Number(setting.year) === Number(year));
           const feeColumns = data.additionalFees.filter((fee) => Number(fee.year) === Number(year));
+          const hasWeddingFees = (data.weddingFees || []).some((fee) => Number(fee.year) === Number(year));
           const feeHeaders = feeColumns.map((fee) => `
             <th>
               ${fee.name}<br>
@@ -104,9 +127,11 @@
             <tr>
               <th>#</th>
               <th>Member</th>
+              ${isAdmin ? '<th>Zone</th>' : ''}
               <th>Status</th>
               ${monthlyDue ? months.map((month) => `<th>${month}</th>`).join('') : '<th>Monthly Due</th>'}
               ${feeHeaders || '<th>Fees</th>'}
+              ${hasWeddingFees ? '<th>Wedding Fee</th>' : ''}
             </tr>
           `;
         }
@@ -119,11 +144,13 @@
             .filter((member) => !query || member.name.toLowerCase().includes(query));
           const monthlyDue = (data.monthlyDueSettings || []).find((setting) => Number(setting.year) === Number(year));
           const feeColumns = data.additionalFees.filter((fee) => Number(fee.year) === Number(year));
+          const weddingFeeRows = (data.weddingFees || []).filter((fee) => Number(fee.year) === year);
 
           renderHeader(year);
 
           tableBody.innerHTML = filteredMembers.map((member, index) => {
             const status = window.TRMSUtils.calculateMemberStatus(member.id, year);
+            const zone = data.zones.find((item) => Number(item.id) === Number(member.zone_id));
             const paidMonths = data.monthlyPayments.filter((payment) => Number(payment.member_id) === Number(member.id) && Number(payment.year) === year);
             const monthlyCells = monthlyDue
               ? months.map((month) => {
@@ -140,14 +167,22 @@
                   return `<td class="checkbox-cell"><label class="payment-toggle"><input type="checkbox" ${isChecked ? 'checked' : ''} aria-label="${member.name} ${fee.name}" data-member-id="${member.id}" data-fee-id="${fee.id}" data-year="${year}" /><span class="payment-box" aria-hidden="true"></span></label></td>`;
                 }).join('')
               : '<td>—</td>';
+              const weddingFee = weddingFeeRows.find((fee) => Number(fee.member_id) === Number(member.id));
+              const weddingFeeCell = weddingFeeRows.length
+                ? weddingFee
+                  ? `<td class="checkbox-cell"><div class="wedding-payment-cell"><label class="payment-toggle"><input type="checkbox" ${weddingFee.paid ? 'checked' : ''} aria-label="${member.name} Wedding Fee ${window.TRMSUtils.formatMoneyShort(weddingFee.amount)}" data-member-id="${member.id}" data-wedding-fee-id="${weddingFee.id}" data-year="${year}" /><span class="payment-box" aria-hidden="true"></span></label><span>${window.TRMSUtils.formatMoneyShort(weddingFee.amount)}</span></div></td>`
+                  : '<td class="payment-unavailable">—</td>'
+                : '';
 
             return `
               <tr>
                 <td>${index + 1}</td>
                 <td>${member.name}</td>
+                ${isAdmin ? `<td>${zone ? zone.name : 'Unknown'}</td>` : ''}
                 <td><span class="${status.className}">${status.label}</span></td>
                 ${monthlyCells}
                 ${feeCells}
+                ${weddingFeeCell}
               </tr>
             `;
           }).join('');
@@ -166,7 +201,9 @@
               saveStatus.className = 'save-status is-saving';
               saveStatus.textContent = 'Saving payment...';
 
-              if (target.dataset.feeId) {
+              if (target.dataset.weddingFeeId) {
+                result = await window.TRMSAuth.saveWeddingFeePayment(target.dataset.weddingFeeId, target.checked);
+              } else if (target.dataset.feeId) {
                 const feeId = target.dataset.feeId;
                 const paymentMatch = dataSet.additionalFeePayments.find((item) => Number(item.member_id) === memberId && item.fee_id === feeId && Number(item.year) === year);
 

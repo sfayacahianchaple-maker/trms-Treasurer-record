@@ -6,6 +6,7 @@
     <title>Zone Members</title>
     <link rel="icon" type="image/png" href="assets/logo.png" />
     <link rel="stylesheet" href="css/style.css?v=20260917-4" />
+    <script src="js/admin-navigation.js" defer></script>
   </head>
   <body data-role="admin" class="app-shell">
     <header class="topbar">
@@ -27,9 +28,11 @@
           <li><a class="active" href="zones.html">Zone List</a></li>
           <li><a href="create-zone.html">Create Zone</a></li>
           <li><a href="members.html">Members</a></li>
+          <li><a href="archives.html">Archives</a></li>
           <li><a href="treasurers.html">Zone Treasurers</a></li>
           <li><a href="monthly-due.html">Monthly Due</a></li>
           <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="wedding-fees.html">Wedding Fees</a></li>
           <li><a href="payment-records.html">Payment Records</a></li>
           <li><a href="reports.html">Reports</a></li>
         </ul>
@@ -149,7 +152,7 @@
         const zoneId = Number(window.TRMSUtils.getQueryParam('zoneId') || 1);
         const data = window.TRMSAuth.getMockData();
         const zone = data.zones.find((item) => Number(item.id) === zoneId) || data.zones[0];
-        const members = data.members.filter((member) => Number(member.zone_id) === Number(zone.id));
+        const members = data.members.filter((member) => member.archived_at == null && Number(member.zone_id) === Number(zone.id));
         const treasurer = data.profiles.find((profile) => Number(profile.zone_id) === Number(zone.id) && profile.role === 'zone_treasurer');
         const yearSelect = document.getElementById('zoneYearSelect');
         const paymentSummary = document.getElementById('zonePaymentSummary');

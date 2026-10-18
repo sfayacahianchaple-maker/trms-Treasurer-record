@@ -6,6 +6,7 @@
     <title>Reports</title>
     <link rel="icon" type="image/png" href="assets/logo.png" />
     <link rel="stylesheet" href="css/style.css" />
+    <script src="js/admin-navigation.js" defer></script>
   </head>
   <body data-role="admin" class="app-shell">
     <header class="topbar">
@@ -27,9 +28,12 @@
           <li><a href="zones.html">Zone List</a></li>
           <li><a href="create-zone.html">Create Zone</a></li>
           <li><a href="members.html">Members</a></li>
+          <li><a href="archives.html">Archives</a></li>
           <li><a href="treasurers.html">Zone Treasurers</a></li>
           <li><a href="monthly-due.html">Monthly Due</a></li>
           <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="wedding-fees.html">Wedding Fees</a></li>
+          <li><a href="treasurer-payments.html">Payment Management</a></li>
           <li><a href="payment-records.html">Payment Records</a></li>
           <li><a class="active" href="reports.html">Reports</a></li>
         </ul>
@@ -67,6 +71,7 @@
         const reportYears = [...new Set([
           ...(data.monthlyDueSettings || []).map((setting) => Number(setting.year)),
           ...(data.additionalFees || []).map((fee) => Number(fee.year)),
+          ...(data.weddingFees || []).map((fee) => Number(fee.year)),
           ...(data.monthlyPayments || []).map((payment) => Number(payment.year)),
           ...(data.additionalFeePayments || []).map((payment) => Number(payment.year))
         ].filter((year) => Number.isInteger(year)))].sort((first, second) => second - first);
@@ -83,23 +88,26 @@
         }
 
         function getReport(year) {
-          const yearMembers = data.members.filter((member) => window.TRMSUtils.memberStartedByYear(member, year));
+          const yearMembers = data.members.filter((member) =>
+            member.archived_at == null && window.TRMSUtils.memberStartedByYear(member, year)
+          );
+          const yearMemberIds = new Set(yearMembers.map((member) => Number(member.id)));
           const totalMembers = yearMembers.length;
           const memberStatuses = yearMembers.map((member) => window.TRMSUtils.calculateMemberStatus(member.id, year));
           const activeMembers = memberStatuses.filter((status) => status.label === 'Active').length;
           const monthlyPaid = data.monthlyPayments
-            .filter((payment) => Number(payment.year) === year && payment.paid)
+            .filter((payment) => yearMemberIds.has(Number(payment.member_id)) && Number(payment.year) === year && payment.paid)
             .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
           const monthlySettings = (data.monthlyDueSettings || []).find((setting) => Number(setting.year) === year) || data.monthlyDue || {};
           const yearPerMember = Number(monthlySettings.yearly_due || (Number(monthlySettings.monthly_amount || 0) * 12));
           const monthlyObligation = totalMembers * yearPerMember;
           const paidMonthlyAmount = data.monthlyPayments
-            .filter((payment) => Number(payment.year) === year && payment.paid)
+            .filter((payment) => yearMemberIds.has(Number(payment.member_id)) && Number(payment.year) === year && payment.paid)
             .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
           const monthlyUnpaidAmount = Math.max(monthlyObligation - paidMonthlyAmount, 0);
           const feeRows = data.additionalFees.filter((fee) => Number(fee.year) === year);
           const feePaid = data.additionalFeePayments
-            .filter((payment) => Number(payment.year) === year && payment.paid)
+            .filter((payment) => yearMemberIds.has(Number(payment.member_id)) && Number(payment.year) === year && payment.paid)
             .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
           const feeObligation = feeRows.reduce((sum, fee) => sum + Number(fee.amount || 0), 0) * totalMembers;
           const feeUnpaid = Math.max(feeObligation - feePaid, 0);

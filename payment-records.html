@@ -6,6 +6,7 @@
     <title>Payment Records</title>
     <link rel="stylesheet" href="css/style.css?v=20260917-2" />
       <link rel="icon" type="image/png" href="assets/logo.png" />
+    <script src="js/admin-navigation.js" defer></script>
   </head>
   <body data-role="admin" class="app-shell">
     <header class="topbar">
@@ -27,9 +28,12 @@
           <li><a href="zones.html">Zone List</a></li>
           <li><a href="create-zone.html">Create Zone</a></li>
           <li><a href="members.html">Members</a></li>
+          <li><a href="archives.html">Archives</a></li>
           <li><a href="treasurers.html">Zone Treasurers</a></li>
           <li><a href="monthly-due.html">Monthly Due</a></li>
           <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="wedding-fees.html">Wedding Fees</a></li>
+          <li><a href="treasurer-payments.html">Payment Management</a></li>
           <li><a class="active" href="payment-records.html">Payment Records</a></li>
           <li><a href="reports.html">Reports</a></li>
         </ul>
@@ -127,7 +131,8 @@
         const body = document.getElementById('paymentRecordsBody');
         const recordYears = [...new Set([
           ...(data.monthlyPayments || []).filter((payment) => payment.paid).map((payment) => Number(payment.year)),
-          ...(data.additionalFeePayments || []).filter((payment) => payment.paid).map((payment) => Number(payment.year))
+          ...(data.additionalFeePayments || []).filter((payment) => payment.paid).map((payment) => Number(payment.year)),
+          ...(data.weddingFees || []).filter((fee) => fee.paid).map((fee) => Number(fee.year))
         ].filter((year) => Number.isInteger(year)))].sort((first, second) => second - first);
         yearSelect.innerHTML = recordYears.length
           ? recordYears.map((year) => `<option value="${year}">${year}</option>`).join('')
@@ -152,6 +157,7 @@
 
         feeSelect.innerHTML = ['<option value="all">All Fees</option>']
           .concat(data.additionalFees.map((fee) => `<option value="${fee.id}">${fee.name} (${fee.year})</option>`))
+          .concat((data.weddingFees || []).length ? ['<option value="wedding">Wedding Fee</option>'] : [])
           .join('');
 
         function renderRecords() {
@@ -208,6 +214,27 @@
               status: payment.paid ? 'Paid' : 'Unpaid',
               amount: Number(payment.amount || 0),
               paid: payment.paid
+            });
+          });
+
+          (data.weddingFees || []).forEach((fee) => {
+            if (!fee.paid || Number(fee.year) !== selectedYear) return;
+            if (selectedFee !== 'all' && selectedFee !== 'wedding') return;
+            const member = data.members.find((item) => Number(item.id) === Number(fee.member_id));
+            if (!member) return;
+            if (selectedMember !== 'all' && Number(member.id) !== Number(selectedMember)) return;
+            if (selectedZone !== 'all' && Number(member.zone_id) !== Number(selectedZone)) return;
+
+            rows.push({
+              type: 'Wedding Fee',
+              member: member.name,
+              zone: data.zones.find((zone) => Number(zone.id) === Number(member.zone_id))?.name || 'Unknown',
+              year: fee.year,
+              month: '—',
+              fee: 'Wedding Fee',
+              status: 'Paid',
+              amount: Number(fee.amount || 0),
+              paid: true
             });
           });
 

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wedding Fees</title>
+    <link rel="icon" type="image/png" href="assets/logo.png" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/admin-navigation.js" defer></script>
+  </head>
+  <body data-role="admin" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Head Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-brand" aria-label="TRMS brand">
+          <img class="sidebar-brand__img" src="assets/logo.png" alt="TRMS logo" />
+          <span class="sidebar-brand__text">TRMS</span>
+        </div>
+        <ul class="nav-list">
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a href="zones.html">Zone List</a></li>
+          <li><a href="create-zone.html">Create Zone</a></li>
+          <li><a href="members.html">Members</a></li>
+          <li><a href="archives.html">Archives</a></li>
+          <li><a href="treasurers.html">Zone Treasurers</a></li>
+          <li><a href="monthly-due.html">Monthly Due</a></li>
+          <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a class="active" href="wedding-fees.html">Wedding Fees</a></li>
+          <li><a href="treasurer-payments.html">Payment Management</a></li>
+          <li><a href="payment-records.html">Payment Records</a></li>
+          <li><a href="reports.html">Reports</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header">
+          <h1>Wedding Fees</h1>
+        </div>
+
+        <section class="card card-spaced-bottom">
+          <h2 id="weddingFeeFormTitle">Add Wedding Fee</h2>
+          <form id="weddingFeeForm" class="form-grid">
+            <div class="form-control">
+              <label for="weddingFeeMember">Member</label>
+              <select id="weddingFeeMember" required></select>
+            </div>
+            <div class="form-control">
+              <label for="weddingFeeAmount">Amount</label>
+              <input id="weddingFeeAmount" type="number" min="0" step="0.01" required />
+            </div>
+            <div class="form-control">
+              <label for="weddingFeeYear">Year</label>
+              <input id="weddingFeeYear" type="number" min="1900" max="2100" required />
+            </div>
+            <div class="form-actions-full button-group">
+              <button type="submit" class="btn btn-primary" id="saveWeddingFee">Save Wedding Fee</button>
+              <button type="button" class="btn btn-secondary" id="cancelWeddingFee" hidden>Cancel</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Member</th>
+                  <th>Zone</th>
+                  <th>Amount</th>
+                  <th>Year</th>
+                  <th>Payment Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="weddingFeesTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260926-3"></script>
+    <script src="js/utils.js?v=20260925-1"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+        const form = document.getElementById('weddingFeeForm');
+        const memberSelect = document.getElementById('weddingFeeMember');
+        const amountInput = document.getElementById('weddingFeeAmount');
+        const yearInput = document.getElementById('weddingFeeYear');
+        const tableBody = document.getElementById('weddingFeesTableBody');
+        const saveButton = document.getElementById('saveWeddingFee');
+        const cancelButton = document.getElementById('cancelWeddingFee');
+        let editingFeeId = null;
+
+        function populateMembers(selectedId = '') {
+          const data = window.TRMSAuth.getMockData();
+          const options = [...data.members]
+            .filter((member) => member.archived_at == null)
+            .sort((first, second) => first.name.localeCompare(second.name))
+            .map((member) => {
+              const zone = data.zones.find((item) => Number(item.id) === Number(member.zone_id));
+              return `<option value="${member.id}">${member.name} - ${zone?.name || 'Unknown'}</option>`;
+            });
+          memberSelect.innerHTML = '<option value="">Select a member</option>' + options.join('');
+          memberSelect.value = String(selectedId || '');
+        }
+
+        function resetForm() {
+          editingFeeId = null;
+          form.reset();
+          yearInput.value = new Date().getFullYear();
+          populateMembers();
+          saveButton.textContent = 'Save Wedding Fee';
+          cancelButton.hidden = true;
+          document.getElementById('weddingFeeFormTitle').textContent = 'Add Wedding Fee';
+        }
+
+        function renderFees() {
+          const data = window.TRMSAuth.getMockData();
+          const fees = data.weddingFees || [];
+          tableBody.innerHTML = fees.length ? fees.map((fee) => {
+            const member = data.members.find((item) => Number(item.id) === Number(fee.member_id));
+            const zone = data.zones.find((item) => Number(item.id) === Number(member?.zone_id));
+            return `
+              <tr>
+                <td>${member?.name || 'Unknown member'}</td>
+                <td>${zone?.name || 'Unknown'}</td>
+                <td>${window.TRMSUtils.formatMoneyShort(fee.amount)}</td>
+                <td>${fee.year}</td>
+                <td><span class="status ${fee.paid ? 'active' : 'inactive'}">${fee.paid ? 'Paid' : 'Unpaid'}</span></td>
+                <td>
+                  <div class="button-group">
+                    <button type="button" class="btn btn-secondary" data-edit-wedding-fee="${fee.id}">Edit</button>
+                    <button type="button" class="btn btn-danger" data-delete-wedding-fee="${fee.id}">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('') : '<tr><td colspan="6">No wedding fees created.</td></tr>';
+        }
+
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const fee = {
+            member_id: Number(memberSelect.value),
+            amount: Number(amountInput.value),
+            year: Number(yearInput.value)
+          };
+          if (!fee.member_id || !Number.isFinite(fee.amount) || fee.amount < 0 || !Number.isInteger(fee.year) || fee.year < 1900 || fee.year > 2100) return;
+          const selectedMember = window.TRMSAuth.getMockData().members.find((member) => Number(member.id) === fee.member_id);
+          if (!selectedMember || Number(selectedMember.start_year) > fee.year) {
+            window.alert('The Wedding Fee year cannot be before the member start year.');
+            return;
+          }
+
+          const duplicate = (window.TRMSAuth.getMockData().weddingFees || []).some((item) =>
+            Number(item.member_id) === fee.member_id && Number(item.year) === fee.year && Number(item.id) !== Number(editingFeeId)
+          );
+          if (duplicate) {
+            window.alert('A wedding fee already exists for this member and year. Edit that fee instead.');
+            return;
+          }
+
+          const result = editingFeeId
+            ? await window.TRMSAuth.updateWeddingFee(editingFeeId, fee)
+            : await window.TRMSAuth.createWeddingFee(fee);
+          if (!result.success) {
+            window.alert(result.message);
+            return;
+          }
+
+          await window.TRMSAuth.ready();
+          renderFees();
+          resetForm();
+        });
+
+        tableBody.addEventListener('click', async (event) => {
+          const editButton = event.target.closest('[data-edit-wedding-fee]');
+          const deleteButton = event.target.closest('[data-delete-wedding-fee]');
+          const feeId = editButton?.dataset.editWeddingFee || deleteButton?.dataset.deleteWeddingFee;
+          if (!feeId) return;
+          const fee = (window.TRMSAuth.getMockData().weddingFees || []).find((item) => Number(item.id) === Number(feeId));
+          if (!fee) return;
+
+          if (editButton) {
+            editingFeeId = fee.id;
+            populateMembers(fee.member_id);
+            amountInput.value = fee.amount;
+            yearInput.value = fee.year;
+            saveButton.textContent = 'Update Wedding Fee';
+            cancelButton.hidden = false;
+            document.getElementById('weddingFeeFormTitle').textContent = 'Edit Wedding Fee';
+            memberSelect.focus();
+            return;
+          }
+
+          if (!window.confirm('Delete this wedding fee?')) return;
+          const result = await window.TRMSAuth.deleteWeddingFee(fee.id);
+          if (!result.success) {
+            window.alert(result.message);
+            return;
+          }
+          await window.TRMSAuth.ready();
+          renderFees();
+          if (Number(editingFeeId) === Number(fee.id)) resetForm();
+        });
+
+        cancelButton.addEventListener('click', resetForm);
+        yearInput.value = new Date().getFullYear();
+        populateMembers();
+        renderFees();
+      });
+    </script>
+  </body>
+</html>

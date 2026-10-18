@@ -6,6 +6,7 @@
     <title>Admin Dashboard</title>
     <link rel="icon" type="image/png" href="assets/logo.png" />
     <link rel="stylesheet" href="css/style.css" />
+    <script src="js/admin-navigation.js" defer></script>
   </head>
   <body data-role="admin" class="app-shell">
     <header class="topbar">
@@ -27,9 +28,11 @@
           <li><a href="zones.html">Zone List</a></li>
           <li><a href="create-zone.html">Create Zone</a></li>
           <li><a href="members.html">Members</a></li>
+          <li><a href="archives.html">Archives</a></li>
           <li><a href="treasurers.html">Zone Treasurers</a></li>
           <li><a href="monthly-due.html">Monthly Due</a></li>
           <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="wedding-fees.html">Wedding Fees</a></li>
           <li><a href="treasurer-payments.html">Payment Management</a></li>
           <li><a href="payment-records.html">Payment Records</a></li>
           <li><a href="reports.html">Reports</a></li>
@@ -78,26 +81,29 @@
 
         const totalZones = data.zones.length;
         const statusYear = new Date().getFullYear();
-        const yearMembers = data.members.filter((member) => window.TRMSUtils.memberStartedByYear(member, statusYear));
+        const yearMembers = data.members.filter((member) =>
+          member.archived_at == null && window.TRMSUtils.memberStartedByYear(member, statusYear)
+        );
         const totalMembers = yearMembers.length;
+        const yearMemberIds = new Set(yearMembers.map((member) => Number(member.id)));
         const memberStatuses = new Map(yearMembers.map((member) => [
           member.id,
           window.TRMSUtils.calculateMemberStatus(member.id, statusYear)
         ]));
         const activeMembers = yearMembers.filter((member) => memberStatuses.get(member.id)?.label === 'Active').length;
         const inactiveMembers = totalMembers - activeMembers;
-        const monthlyPaid = data.monthlyPayments.filter((payment) => Number(payment.year) === statusYear && payment.paid)
+        const monthlyPaid = data.monthlyPayments.filter((payment) => yearMemberIds.has(Number(payment.member_id)) && Number(payment.year) === statusYear && payment.paid)
           .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
         const monthlySettings = (data.monthlyDueSettings || []).find((setting) => Number(setting.year) === statusYear) || data.monthlyDue || {};
         const yearPerMember = Number(monthlySettings.yearly_due || (Number(monthlySettings.monthly_amount || 0) * 12));
         const monthlyObligation = totalMembers * yearPerMember;
         const paidMonthlyAmount = data.monthlyPayments
-          .filter((payment) => Number(payment.year) === statusYear && payment.paid)
+          .filter((payment) => yearMemberIds.has(Number(payment.member_id)) && Number(payment.year) === statusYear && payment.paid)
           .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
         const monthlyUnpaidAmount = Math.max(monthlyObligation - paidMonthlyAmount, 0);
-        const additionalPaid = data.additionalFeePayments.filter((payment) => Number(payment.year) === statusYear && payment.paid)
+        const additionalPaid = data.additionalFeePayments.filter((payment) => yearMemberIds.has(Number(payment.member_id)) && Number(payment.year) === statusYear && payment.paid)
           .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-        const additionalUnpaid = data.additionalFeePayments.filter((payment) => Number(payment.year) === statusYear && !payment.paid)
+        const additionalUnpaid = data.additionalFeePayments.filter((payment) => yearMemberIds.has(Number(payment.member_id)) && Number(payment.year) === statusYear && !payment.paid)
           .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
 
         const cards = [

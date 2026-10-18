@@ -287,6 +287,21 @@ a { color: var(--forest); }
   min-width: 0;
 }
 
+.nav-list .nav-section {
+  padding: 16px 22px 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: #aebdaf;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nav-list .nav-section:first-child {
+  padding-top: 8px;
+  border-top: 0;
+}
+
 .nav-list a {
   display: block;
   width: 100%;
@@ -344,10 +359,32 @@ a { color: var(--forest); }
 }
 
 .record-page .print-record-button {
-  height: 32px;
+  min-height: 34px;
   padding: 6px 10px;
-  font-size: 0.8rem;
-  line-height: 1;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.record-page .record-filters select {
+  width: 80px;
+  flex: 0 0 80px;
+}
+
+.record-page .receipt-print-group .button-group {
+  flex-wrap: nowrap;
+}
+
+.record-page #printReceipt,
+.record-page #archiveMember {
+  min-width: 120px;
+}
+
+.record-page #printWeddingReceipt {
+  min-width: 130px;
+}
+
+.record-page #archiveMember {
+  align-self: flex-end;
 }
 
 .record-page .record-actions {
@@ -363,6 +400,19 @@ a { color: var(--forest); }
   gap: 10px;
 }
 
+.record-page .receipt-print-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.record-page .receipt-print-label {
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 .zone-member-search {
   display: flex;
   align-items: center;
@@ -373,6 +423,24 @@ a { color: var(--forest); }
   background: var(--paper-alt);
   border: 1px solid var(--rule);
   border-radius: var(--radius-md);
+}
+
+.member-list-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.member-list-search label {
+  color: var(--forest-dark);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.member-list-search input {
+  flex: 1;
+  min-width: 0;
 }
 
 .zone-member-search label {
@@ -625,6 +693,13 @@ tbody tr:last-child td {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 120ms ease, border-color 120ms ease;
+}
+
+.wedding-payment-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .payment-toggle:hover {
@@ -979,6 +1054,7 @@ input[type="checkbox"] {
   .layout { flex-direction: column; }
   .nav-list { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; padding: 0 12px 4px; gap: 6px; }
   .nav-list li { flex: 0 0 auto; width: auto; }
+  .nav-list .nav-section { flex: 0 0 auto; width: auto; align-self: center; padding: 8px 6px; border: 0; white-space: nowrap; }
   .nav-list a { width: auto; border-left: none; border-bottom: 3px solid transparent; padding: 8px 12px; text-align: center; white-space: nowrap; }
   .nav-list a.active { border-bottom-color: var(--brass); }
   .content { padding: 20px; }
@@ -1035,6 +1111,14 @@ input[type="checkbox"] {
 
   .record-page .record-filters {
     flex-wrap: wrap;
+  }
+
+  .record-page .receipt-print-group {
+    flex: 1 1 100%;
+  }
+
+  .record-page .receipt-print-group .button-group {
+    width: 100%;
   }
 
   .record-page .record-filters select {

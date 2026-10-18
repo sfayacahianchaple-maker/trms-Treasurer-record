@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Archives</title>
+    <link rel="icon" type="image/png" href="assets/logo.png" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/admin-navigation.js" defer></script>
+  </head>
+  <body data-role="admin" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Head Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-brand" aria-label="TRMS brand">
+          <img class="sidebar-brand__img" src="assets/logo.png" alt="TRMS logo" />
+          <span class="sidebar-brand__text">TRMS</span>
+        </div>
+        <ul class="nav-list">
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a href="zones.html">Zone List</a></li>
+          <li><a href="create-zone.html">Create Zone</a></li>
+          <li><a href="members.html">Members</a></li>
+          <li><a class="active" href="archives.html">Archives</a></li>
+          <li><a href="treasurers.html">Zone Treasurers</a></li>
+          <li><a href="monthly-due.html">Monthly Due</a></li>
+          <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="wedding-fees.html">Wedding Fees</a></li>
+          <li><a href="treasurer-payments.html">Payment Management</a></li>
+          <li><a href="payment-records.html">Payment Records</a></li>
+          <li><a href="reports.html">Reports</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">Member Management</p>
+            <h1>Archives <span id="archivedMemberCount">0</span></h1>
+          </div>
+          <div class="member-list-search" role="search">
+            <label for="archiveSearch">Find member</label>
+            <input id="archiveSearch" type="search" placeholder="Name, phone, or zone" autocomplete="off" />
+          </div>
+        </div>
+
+        <section class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Member</th>
+                  <th>Phone</th>
+                  <th>Zone</th>
+                  <th>Archived</th>
+                  <th>Record</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="archivedMembersBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20260926-3"></script>
+    <script src="js/utils.js?v=20260925-1"></script>
+    <script src="js/guard.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        await window.TRMSAuth.ready();
+        const body = document.getElementById('archivedMembersBody');
+        const search = document.getElementById('archiveSearch');
+
+        function renderArchivedMembers() {
+          const data = window.TRMSAuth.getMockData();
+          const query = search.value.trim().toLowerCase();
+          const archivedMembers = data.members
+            .filter((member) => member.archived_at != null)
+            .filter((member) => {
+              const zone = data.zones.find((item) => Number(item.id) === Number(member.zone_id));
+              return `${member.name || ''} ${member.phone || ''} ${zone?.name || ''}`.toLowerCase().includes(query);
+            })
+            .sort((first, second) => new Date(second.archived_at) - new Date(first.archived_at));
+
+          document.getElementById('archivedMemberCount').textContent = archivedMembers.length;
+          body.innerHTML = archivedMembers.length ? archivedMembers.map((member) => {
+            const zone = data.zones.find((item) => Number(item.id) === Number(member.zone_id));
+            const archivedDate = new Date(member.archived_at).toLocaleDateString();
+            return `
+              <tr>
+                <td>${member.name}</td>
+                <td>${member.phone || '—'}</td>
+                <td>${zone?.name || 'Unknown'}</td>
+                <td>${archivedDate}</td>
+                <td><a class="btn btn-secondary" href="member-record.html?memberId=${member.id}&zoneId=${member.zone_id}">View Record</a></td>
+                <td><button type="button" class="btn btn-secondary" data-restore-member="${member.id}">Restore</button></td>
+              </tr>
+            `;
+          }).join('') : '<tr><td colspan="6">No archived members found.</td></tr>';
+        }
+
+        search.addEventListener('input', renderArchivedMembers);
+        body.addEventListener('click', async (event) => {
+          const restoreButton = event.target.closest('[data-restore-member]');
+          if (!restoreButton) return;
+          const memberId = Number(restoreButton.dataset.restoreMember);
+          const member = window.TRMSAuth.getMockData().members.find((item) => Number(item.id) === memberId);
+          if (!member || !window.confirm(`Restore ${member.name} to active members?`)) return;
+
+          const result = await window.TRMSAuth.restoreMember(memberId);
+          if (!result.success) {
+            window.alert(result.message);
+            return;
+          }
+          renderArchivedMembers();
+        });
+
+        renderArchivedMembers();
+      });
+    </script>
+  </body>
+</html>

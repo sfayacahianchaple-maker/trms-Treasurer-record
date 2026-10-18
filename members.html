@@ -6,6 +6,7 @@
     <title>Members</title>
     <link rel="stylesheet" href="css/style.css?v=20260916-9" />
       <link rel="icon" type="image/png" href="assets/logo.png" />
+    <script src="js/admin-navigation.js" defer></script>
   </head>
   <body data-role="admin" class="app-shell">
     <header class="topbar">
@@ -27,9 +28,12 @@
           <li><a href="zones.html">Zone List</a></li>
           <li><a href="create-zone.html">Create Zone</a></li>
           <li><a class="active" href="members.html">Members</a></li>
+          <li><a href="archives.html">Archives</a></li>
           <li><a href="treasurers.html">Zone Treasurers</a></li>
           <li><a href="monthly-due.html">Monthly Due</a></li>
           <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="wedding-fees.html">Wedding Fees</a></li>
+          <li><a href="treasurer-payments.html">Payment Management</a></li>
           <li><a href="payment-records.html">Payment Records</a></li>
           <li><a href="reports.html">Reports</a></li>
         </ul>
@@ -114,6 +118,10 @@
         </div>
 
         <section class="card">
+          <div class="member-list-search" role="search">
+            <label for="memberSearch">Search members</label>
+            <input id="memberSearch" type="search" placeholder="Name or zone" autocomplete="off" />
+          </div>
           <div class="table-wrap">
             <table>
               <thead>
@@ -146,6 +154,7 @@
         const form = document.getElementById('addMemberForm');
         const zoneSelect = document.getElementById('memberZone');
         const yearSelect = document.getElementById('memberYearSelect');
+        const memberSearch = document.getElementById('memberSearch');
         const editModal = document.getElementById('editMemberModal');
         const editForm = document.getElementById('editMemberForm');
         const editZoneSelect = document.getElementById('editMemberZone');
@@ -160,7 +169,12 @@
         function renderMembers() {
           const data = window.TRMSAuth.getMockData();
           const year = Number(yearSelect.value);
-          const visibleMembers = data.members.filter((member) => window.TRMSUtils.memberStartedByYear(member, year));
+          const query = memberSearch.value.trim().toLowerCase();
+          const visibleMembers = data.members.filter((member) => {
+            const zone = data.zones.find((item) => Number(item.id) === Number(member.zone_id));
+            const searchableText = `${member.name || ''} ${zone?.name || ''}`.toLowerCase();
+            return member.archived_at == null && window.TRMSUtils.memberStartedByYear(member, year) && searchableText.includes(query);
+          });
           body.innerHTML = visibleMembers.map((member) => {
             const zone = data.zones.find((item) => Number(item.id) === Number(member.zone_id));
             const status = window.TRMSUtils.calculateMemberStatus(member.id, year);
@@ -281,6 +295,7 @@
         yearSelect.innerHTML = memberYears.map((year) => `<option value="${year}">${year}</option>`).join('');
         yearSelect.value = String(Number(data.monthlyDue?.year) || currentYear);
         yearSelect.addEventListener('change', renderMembers);
+        memberSearch.addEventListener('input', renderMembers);
         document.getElementById('memberStartYear').value = currentYear;
         renderMembers();
       });

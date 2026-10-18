@@ -53,6 +53,7 @@
       monthlyPayments: [],
       additionalFees: [],
       additionalFeePayments: [],
+      weddingFees: [],
       monthlyDueSettings: []
     };
   }
@@ -207,13 +208,14 @@
       return;
     }
 
-    const tables = ['zones', 'members', 'profiles', 'monthly_due_settings', 'monthly_payments', 'additional_fees', 'additional_fee_payments'];
+    const tables = ['zones', 'members', 'profiles', 'monthly_due_settings', 'monthly_payments', 'additional_fees', 'additional_fee_payments', 'wedding_fees'];
     const data = {};
 
     for (const table of tables) {
       const { data: rows, error } = await client.from(table).select('*');
       if (!error) {
-        data[table.replace('monthly_due_settings', 'monthlyDue')] = rows || [];
+        const dataKey = table === 'monthly_due_settings' ? 'monthlyDue' : table === 'wedding_fees' ? 'weddingFees' : table;
+        data[dataKey] = rows || [];
       }
     }
 
@@ -228,6 +230,7 @@
     const monthlyPayments = data.monthly_payments || [];
     const additionalFees = data.additional_fees || [];
     const additionalFeePayments = data.additional_fee_payments || [];
+    const weddingFees = data.weddingFees || [];
 
     localStorage.setItem('trms_supabase_cache_v1', JSON.stringify({
       zones,
@@ -237,7 +240,8 @@
       monthlyDueSettings,
       monthlyPayments,
       additionalFees,
-      additionalFeePayments
+      additionalFeePayments,
+      weddingFees,
     }));
   }
 
@@ -291,6 +295,33 @@
 
     const { error } = await client.from('members').delete().eq('id', memberId);
     if (error) return { success: false, message: error.message || 'Unable to delete member.' };
+    await hydrateSupabaseCache();
+    return { success: true };
+  }
+
+  async function archiveMember(memberId) {
+    const client = await ensureSupabaseClient();
+    if (!client) return { success: false, message: 'Supabase is not configured.' };
+    if (getCurrentUser()?.role !== 'admin') return { success: false, message: 'Only administrators can archive members.' };
+
+    const { error } = await client.from('members')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', memberId)
+      .is('archived_at', null);
+    if (error) return { success: false, message: error.message || 'Unable to archive member.' };
+    await hydrateSupabaseCache();
+    return { success: true };
+  }
+
+  async function restoreMember(memberId) {
+    const client = await ensureSupabaseClient();
+    if (!client) return { success: false, message: 'Supabase is not configured.' };
+    if (getCurrentUser()?.role !== 'admin') return { success: false, message: 'Only administrators can restore members.' };
+
+    const { error } = await client.from('members')
+      .update({ archived_at: null })
+      .eq('id', memberId);
+    if (error) return { success: false, message: error.message || 'Unable to restore member.' };
     await hydrateSupabaseCache();
     return { success: true };
   }
@@ -384,7 +415,8 @@
     const { data: members, error: membersError } = await client
       .from('members')
       .select('id, start_year')
-      .lte('start_year', settings.year);
+      .lte('start_year', settings.year)
+      .is('archived_at', null);
     if (membersError) return { success: false, message: membersError.message || 'Unable to load members for the monthly due.' };
 
     const { data: existingPayments, error: paymentsError } = await client
@@ -439,7 +471,8 @@
     const { data: members, error: membersError } = await client
       .from('members')
       .select('id')
-      .lte('start_year', fee.year);
+      .lte('start_year', fee.year)
+      .is('archived_at', null);
     if (membersError) return { success: false, message: membersError.message || 'Unable to load members for the additional fee.' };
     const paymentRows = (members || []).map((member) => ({
       fee_id: fee.id,
@@ -582,6 +615,82 @@
     return { success: true };
   }
 
+  async function createWeddingFee(fee) {
+    const client = await ensureSupabaseClient();
+    if (!client) return { success: false, message: 'Supabase is not configured.' };
+    if (!Number.isInteger(Number(fee.member_id)) || !Number.isFinite(Number(fee.amount)) || Number(fee.amount) < 0 || !Number.isInteger(Number(fee.year))) {
+      return { success: false, message: 'Select a member and enter a valid amount and year.' };
+    }
+
+    const { data: member, error: memberError } = await client.from('members')
+      .select('id, start_year')
+      .eq('id', fee.member_id)
+      .is('archived_at', null)
+      .maybeSingle();
+    if (memberError) return { success: false, message: memberError.message || 'Unable to verify the selected member.' };
+    if (!member) return { success: false, message: 'Select an active member for the Wedding Fee.' };
+    if (Number(member.start_year) > Number(fee.year)) return { success: false, message: 'The Wedding Fee year cannot be before the member start year.' };
+
+    const { error } = await client.from('wedding_fees').insert({
+      member_id: fee.member_id,
+      amount: fee.amount,
+      year: fee.year,
+      paid: false
+    });
+    if (error) return { success: false, message: error.message || 'Unable to create wedding fee.' };
+    await hydrateSupabaseCache();
+    return { success: true };
+  }
+
+  async function updateWeddingFee(feeId, fee) {
+    const client = await ensureSupabaseClient();
+    if (!client) return { success: false, message: 'Supabase is not configured.' };
+    if (!Number.isInteger(Number(fee.member_id)) || !Number.isFinite(Number(fee.amount)) || Number(fee.amount) < 0 || !Number.isInteger(Number(fee.year))) {
+      return { success: false, message: 'Select a member and enter a valid amount and year.' };
+    }
+
+    const { data: member, error: memberError } = await client.from('members')
+      .select('id, start_year')
+      .eq('id', fee.member_id)
+      .is('archived_at', null)
+      .maybeSingle();
+    if (memberError) return { success: false, message: memberError.message || 'Unable to verify the selected member.' };
+    if (!member) return { success: false, message: 'Select an active member for the Wedding Fee.' };
+    if (Number(member.start_year) > Number(fee.year)) return { success: false, message: 'The Wedding Fee year cannot be before the member start year.' };
+
+    const { error } = await client.from('wedding_fees').update({
+      member_id: fee.member_id,
+      amount: fee.amount,
+      year: fee.year
+    }).eq('id', feeId);
+    if (error) return { success: false, message: error.message || 'Unable to update wedding fee.' };
+    await hydrateSupabaseCache();
+    return { success: true };
+  }
+
+  async function deleteWeddingFee(feeId) {
+    const client = await ensureSupabaseClient();
+    if (!client) return { success: false, message: 'Supabase is not configured.' };
+    const { error } = await client.from('wedding_fees').delete().eq('id', feeId);
+    if (error) return { success: false, message: error.message || 'Unable to delete wedding fee.' };
+    await hydrateSupabaseCache();
+    return { success: true };
+  }
+
+  async function saveWeddingFeePayment(feeId, paid) {
+    const client = await ensureSupabaseClient();
+    if (!client) return { success: false, message: 'Supabase is not configured.' };
+    const user = getCurrentUser();
+    const { error } = await client.from('wedding_fees').update({
+      paid,
+      paid_date: paid ? new Date().toISOString() : null,
+      recorded_by: user?.id || null
+    }).eq('id', feeId);
+    if (error) return { success: false, message: error.message || 'Unable to save wedding fee payment.' };
+    await hydrateSupabaseCache();
+    return { success: true };
+  }
+
   async function ready() {
     try {
       if (isSupabaseConfigured()) {
@@ -602,6 +711,8 @@
     createMember,
     updateMember,
     deleteMember,
+    archiveMember,
+    restoreMember,
     createTreasurerAccount,
     createZone,
     updateZone,
@@ -615,6 +726,10 @@
     deleteTreasurerProfile,
     saveMonthlyPayment,
     saveAdditionalFeePayment,
+    createWeddingFee,
+    updateWeddingFee,
+    deleteWeddingFee,
+    saveWeddingFeePayment,
     hydrateSupabaseCache,
     ready
   };

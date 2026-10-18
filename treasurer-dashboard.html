@@ -63,7 +63,7 @@
 
         const statusYear = Number(data.monthlyDue?.year || new Date().getFullYear());
         const memberList = data.members.filter((member) =>
-          Number(member.zone_id) === Number(zoneId) && window.TRMSUtils.memberStartedByYear(member, statusYear)
+          member.archived_at == null && Number(member.zone_id) === Number(zoneId) && window.TRMSUtils.memberStartedByYear(member, statusYear)
         );
         const memberStatuses = new Map(memberList.map((member) => [
           member.id,

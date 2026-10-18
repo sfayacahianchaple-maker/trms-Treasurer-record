@@ -80,9 +80,9 @@
         await window.TRMSAuth.ready();
         const user = window.TRMSAuth.getCurrentUser();
         const zoneId = user?.zone_id;
-        const data = window.TRMSAuth.getMockData();
+        let data = window.TRMSAuth.getMockData();
         const zone = data.zones.find((item) => Number(item.id) === Number(zoneId)) || data.zones[0];
-        const members = data.members.filter((member) => Number(member.zone_id) === Number(zone.id));
+        let members = data.members.filter((member) => member.archived_at == null && Number(member.zone_id) === Number(zone.id));
         const yearSelect = document.getElementById('memberYearSelect');
         const paymentSummary = document.getElementById('memberPaymentSummary');
         const memberYears = [...new Set((data.monthlyDueSettings || [])
@@ -149,7 +149,20 @@
           `).join('');
         }
 
+        function refreshMemberData() {
+          data = window.TRMSAuth.getMockData();
+          members = data.members.filter((member) => member.archived_at == null && Number(member.zone_id) === Number(zone.id));
+          renderMembers();
+        }
+
         yearSelect.addEventListener('change', renderMembers);
+        window.addEventListener('storage', (event) => {
+          if (event.key === 'trms_supabase_cache_v1') refreshMemberData();
+        });
+        window.addEventListener('focus', async () => {
+          await window.TRMSAuth.ready();
+          refreshMemberData();
+        });
         renderMembers();
       });
     </script>
