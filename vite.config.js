@@ -41,6 +41,7 @@ function copyStaticDirectories() {
 }
 
 export default defineConfig({
+  base: './',
   plugins: [copyStaticDirectories()],
   build: {
     rollupOptions: {
