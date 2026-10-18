@@ -32,6 +32,11 @@
             <input id="password" name="password" type="password" placeholder="Password" required />
           </div>
 
+          <div class="login-remember">
+            <input id="stayLoggedIn" name="stayLoggedIn" type="checkbox" />
+            <label for="stayLoggedIn">Stay logged in</label>
+          </div>
+
           <button type="submit" class="btn btn-primary">Login</button>
           <div id="loginMessage" class="empty-state login-message"></div>
         </form>
@@ -39,15 +44,22 @@
     </main>
 
     <script src="js/config.js"></script>
-    <script src="js/auth.js?v=20260926-3"></script>
+    <script src="js/auth.js?v=20261018-1"></script>
     <script>
       document.addEventListener('DOMContentLoaded', () => {
         const form = document.getElementById('loginForm');
         const message = document.getElementById('loginMessage');
         const emailInput = document.getElementById('email');
         const emailLabel = document.getElementById('emailLabel');
+        const stayLoggedInInput = document.getElementById('stayLoggedIn');
         const roleButtons = document.querySelectorAll('.auth-role-btn');
         let selectedRole = 'admin';
+
+        const currentUser = window.TRMSAuth.getCurrentUser();
+        if (currentUser) {
+          window.location.replace(currentUser.role === 'admin' ? 'admin-dashboard.html' : 'treasurer-dashboard.html');
+          return;
+        }
 
         function updateRoleUI(role) {
           selectedRole = role;
@@ -77,7 +89,7 @@
 
           let result;
           try {
-            result = await window.TRMSAuth.login({ email, password });
+            result = await window.TRMSAuth.login({ email, password, stayLoggedIn: stayLoggedInInput.checked });
           } catch (error) {
             message.textContent = error.message || 'Unable to connect to Supabase. Check your internet connection and try again.';
             return;
@@ -88,11 +100,13 @@
           }
 
           if (selectedRole === 'admin' && result.user.role !== 'admin') {
+            await window.TRMSAuth.logout();
             message.textContent = 'This login option is for Admin only. Please use the Zone User login for treasurer accounts.';
             return;
           }
 
           if (selectedRole === 'zone_treasurer' && result.user.role !== 'zone_treasurer') {
+            await window.TRMSAuth.logout();
             message.textContent = 'This login option is for Zone User only. Please use the Admin login for administrator accounts.';
             return;
           }

@@ -3,6 +3,15 @@
    anon key in js/config.js before using the app. */
 (function () {
   const CONFIG = window.TRMS_CONFIG || {};
+  const REMEMBER_SESSION_KEY = 'trms_remember_session_v1';
+
+  function shouldPersistSession() {
+    return localStorage.getItem(REMEMBER_SESSION_KEY) !== 'false';
+  }
+
+  function getSessionStorage() {
+    return shouldPersistSession() ? localStorage : sessionStorage;
+  }
 
   function isSupabaseConfigured() {
     return !!(
@@ -15,7 +24,7 @@
 
   let supabaseLoader = null;
 
-  async function ensureSupabaseClient() {
+  async function ensureSupabaseClient(persistSession = shouldPersistSession()) {
     if (!isSupabaseConfigured()) {
       return null;
     }
@@ -41,7 +50,12 @@
       await supabaseLoader;
     }
 
-    return window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
+    return window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey, {
+      auth: {
+        persistSession,
+        storage: persistSession ? localStorage : sessionStorage
+      }
+    });
   }
 
   function emptyDataSet() {
@@ -122,8 +136,9 @@
     overlay.querySelector('[data-alert-close]').focus();
   }
 
-  async function login({ email, password }) {
-    const client = await ensureSupabaseClient();
+  async function login({ email, password, stayLoggedIn = true }) {
+    localStorage.setItem(REMEMBER_SESSION_KEY, String(stayLoggedIn));
+    const client = await ensureSupabaseClient(stayLoggedIn);
     if (!client) {
       return {
         success: false,
@@ -174,7 +189,9 @@
       zone_id: profile?.zone_id ?? metadata.zone_id ?? null
     };
 
-    localStorage.setItem(CONFIG.sessionKey, JSON.stringify(session));
+    const sessionStorageArea = stayLoggedIn ? localStorage : sessionStorage;
+    sessionStorageArea.setItem(CONFIG.sessionKey, JSON.stringify(session));
+    (stayLoggedIn ? sessionStorage : localStorage).removeItem(CONFIG.sessionKey);
     return { success: true, user: session };
   }
 
@@ -184,10 +201,11 @@
       await client.auth.signOut();
     }
     localStorage.removeItem(CONFIG.sessionKey);
+    sessionStorage.removeItem(CONFIG.sessionKey);
   }
 
   function getCurrentUser() {
-    const raw = localStorage.getItem(CONFIG.sessionKey || 'trms_session_v1');
+    const raw = getSessionStorage().getItem(CONFIG.sessionKey || 'trms_session_v1');
     if (!raw) return null;
 
     try {

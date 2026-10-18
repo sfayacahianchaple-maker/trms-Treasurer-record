@@ -30,7 +30,6 @@ function copyStaticDirectories() {
   const directories = ['js', 'css', 'assets'];
 
   return {
-    name: 'copy-static-directories',
     writeBundle() {
       for (const directory of directories) {
         const destination = resolve(projectRoot, 'dist', directory);

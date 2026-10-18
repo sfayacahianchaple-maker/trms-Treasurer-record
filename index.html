@@ -20,5 +20,15 @@
         </div>
       </section>
     </main>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js?v=20261018-1"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const user = window.TRMSAuth.getCurrentUser();
+        if (user) {
+          window.location.replace(user.role === 'admin' ? 'admin-dashboard.html' : 'treasurer-dashboard.html');
+        }
+      });
+    </script>
   </body>
 </html>
