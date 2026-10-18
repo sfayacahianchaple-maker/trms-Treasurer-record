@@ -2,12 +2,18 @@
    session exists and matches the page's required role, fills in
    the user chip, and wires the logout button. */
 (function () {
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     const requiredRole = document.body.getAttribute('data-role');
     const user = window.TRMSAuth.getCurrentUser();
 
     if (!user) {
       window.location.href = 'login.html';
+      return;
+    }
+
+    if (!(await window.TRMSAuth.hasAuthSession())) {
+      await window.TRMSAuth.logout();
+      window.location.replace('login.html');
       return;
     }
 

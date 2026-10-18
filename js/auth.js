@@ -204,6 +204,17 @@
     sessionStorage.removeItem(CONFIG.sessionKey);
   }
 
+  async function hasAuthSession() {
+    try {
+      const client = await ensureSupabaseClient();
+      if (!client) return false;
+      const { data, error } = await client.auth.getSession();
+      return !error && Boolean(data.session);
+    } catch {
+      return false;
+    }
+  }
+
   function getCurrentUser() {
     const raw = getSessionStorage().getItem(CONFIG.sessionKey || 'trms_session_v1');
     if (!raw) return null;
@@ -725,6 +736,7 @@
     resetMockData,
     login,
     logout,
+    hasAuthSession,
     getCurrentUser,
     createMember,
     updateMember,
