@@ -1299,7 +1299,7 @@ input[type="checkbox"] {
   }
 
   .topbar-meta .user-chip {
-    max-width: 150px;
+    max-width: clamp(80px, calc(100vw - 230px), 150px);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
