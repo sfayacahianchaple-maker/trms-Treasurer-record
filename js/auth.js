@@ -275,6 +275,100 @@
     }));
   }
 
+  async function verifyAdminBackupAccess() {
+    const client = await ensureSupabaseClient();
+    if (!client) {
+      throw new Error('Supabase is not configured.');
+    }
+
+    const { data: authData, error: authError } = await client.auth.getUser();
+    if (authError || !authData.user) {
+      throw new Error('A valid Supabase session is required.');
+    }
+
+    const { data: profile, error: profileError } = await client
+      .from('profiles')
+      .select('id, role')
+      .eq('id', authData.user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      throw new Error(`Unable to verify administrator access: ${profileError.message}`);
+    }
+    if (profile?.role !== 'admin') {
+      throw new Error('Only the Head Treasurer can download backups.');
+    }
+
+    return client;
+  }
+
+  async function getAdminBackupSummary() {
+    const client = await verifyAdminBackupAccess();
+    const tables = [
+      ['members', 'members'],
+      ['zones', 'zones'],
+      ['monthlyPayments', 'monthly_payments'],
+      ['additionalFeePayments', 'additional_fee_payments']
+    ];
+    const counts = await Promise.all(tables.map(async ([key, table]) => {
+      const { count, error } = await client.from(table).select('id', { count: 'exact', head: true });
+      if (error) {
+        throw new Error(`Unable to count ${table}: ${error.message}`);
+      }
+      return [key, count || 0];
+    }));
+    return Object.fromEntries(counts);
+  }
+
+  async function getAdminBackupData(exportType = 'annual') {
+    if (exportType !== 'annual' && exportType !== 'complete') {
+      throw new Error('Unsupported backup type.');
+    }
+    const client = await verifyAdminBackupAccess();
+    const tables = [
+      { key: 'zones', table: 'zones', columns: 'id, name, description, treasurer_id, created_at' },
+      { key: 'members', table: 'members', columns: 'id, zone_id, name, address, phone, start_year, is_active, archived_at, created_at' },
+      { key: 'treasurers', table: 'profiles', columns: 'id, username, name, role, zone_id, created_at', role: 'zone_treasurer' },
+      { key: 'monthlyDueSettings', table: 'monthly_due_settings', columns: 'id, year, monthly_amount, yearly_due, active_threshold, created_at' },
+      { key: 'monthlyPayments', table: 'monthly_payments', columns: 'id, member_id, year, month, amount, paid, paid_date, recorded_by, created_at' },
+      { key: 'additionalFees', table: 'additional_fees', columns: 'id, name, description, amount, year, created_at' },
+      { key: 'additionalFeePayments', table: 'additional_fee_payments', columns: 'id, fee_id, member_id, year, amount, paid, paid_date, recorded_by, created_at' },
+      { key: 'weddingFees', table: 'wedding_fees', columns: 'id, member_id, amount, year, paid, paid_date, recorded_by, created_at' }
+    ];
+    const annualTables = new Set([
+      'zones',
+      'members',
+      'monthlyDueSettings',
+      'monthlyPayments',
+      'additionalFees',
+      'additionalFeePayments'
+    ]);
+    const backup = {};
+    const pageSize = 500;
+
+    for (const { key, table, columns, role } of tables.filter((item) =>
+      exportType === 'complete' || annualTables.has(item.key)
+    )) {
+      const rows = [];
+      for (let offset = 0; ; offset += pageSize) {
+        let query = client.from(table).select(columns);
+        if (role) query = query.eq('role', role);
+        const { data: page, error } = await query
+          .order('id', { ascending: true })
+          .range(offset, offset + pageSize - 1);
+
+        if (error) {
+          throw new Error(`Unable to export ${key}: ${error.message}`);
+        }
+        rows.push(...(page || []));
+        if (!page || page.length < pageSize) break;
+      }
+      backup[key] = rows;
+    }
+
+    return backup;
+  }
+
   async function createMember(member) {
     const client = await ensureSupabaseClient();
     if (!client) return { success: false, message: 'Supabase is not configured.' };
@@ -735,6 +829,8 @@
     getMockData,
     saveMockData,
     resetMockData,
+    getAdminBackupData,
+    getAdminBackupSummary,
     login,
     logout,
     hasAuthSession,
@@ -767,4 +863,3 @@
 
   window.alert = showAlert;
 })();
-

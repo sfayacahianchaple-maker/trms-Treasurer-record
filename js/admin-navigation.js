@@ -2,6 +2,20 @@ function groupAdminNavigation() {
   if (window.TRMSAuth?.getCurrentUser()?.role !== 'admin') return true;
   const navigation = document.querySelector('.nav-list');
   if (!navigation) return true;
+  if (!navigation.children.length) return false;
+
+  if (!navigation.querySelector('a[href="backup-export.html"]')) {
+    const item = document.createElement('li');
+    const link = document.createElement('a');
+    link.href = 'backup-export.html';
+    link.textContent = 'Backup & Export';
+    if (window.location.pathname.endsWith('/backup-export.html')) {
+      link.className = 'active';
+      link.setAttribute('aria-current', 'page');
+    }
+    item.appendChild(link);
+    navigation.appendChild(item);
+  }
 
   const links = new Map([...navigation.querySelectorAll(':scope > li')]
     .map((item) => [item.querySelector('a')?.getAttribute('href'), item])
@@ -12,7 +26,7 @@ function groupAdminNavigation() {
     { label: 'Overview', hrefs: ['admin-dashboard.html'] },
     { label: 'Create', hrefs: ['create-zone.html', 'members.html', 'treasurers.html', 'monthly-due.html', 'additional-fees.html', 'wedding-fees.html'] },
     { label: 'View', hrefs: ['zones.html', 'treasurer-payments.html'] },
-    { label: 'Reports & Records', hrefs: ['payment-records.html', 'reports.html', 'archives.html'] }
+    { label: 'Reports & Records', hrefs: ['payment-records.html', 'reports.html', 'archives.html', 'backup-export.html'] }
   ];
 
   navigation.replaceChildren();

@@ -16,6 +16,7 @@ const htmlPages = [
   'monthly-due',
   'payment-records',
   'reports',
+  'backup-export',
   'treasurer-dashboard',
   'treasurer-members',
   'treasurer-payments',

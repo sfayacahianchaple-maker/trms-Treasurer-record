@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Backup &amp; Export | TRMS</title>
+    <link rel="icon" type="image/png" href="assets/logo.png" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/admin-navigation.js" defer></script>
+  </head>
+  <body data-role="admin" class="app-shell backup-page">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Head Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-brand" aria-label="TRMS brand">
+          <img class="sidebar-brand__img" src="assets/logo.png" alt="TRMS logo" />
+          <span class="sidebar-brand__text">TRMS</span>
+        </div>
+        <ul class="nav-list">
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a class="active" aria-current="page" href="backup-export.html">Backup &amp; Export</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">Admin tools</p>
+            <h1>Backup &amp; Export</h1>
+            <p>Download a copy of TRMS financial records for safekeeping.</p>
+          </div>
+        </div>
+
+        <section class="grid metrics-grid backup-metrics" aria-label="Backup data overview">
+          <article class="card metric-card"><span class="label">Registered Members</span><span class="value" id="totalMembers">—</span></article>
+          <article class="card metric-card"><span class="label">Zones</span><span class="value" id="totalZones">—</span></article>
+          <article class="card metric-card"><span class="label">Monthly Payment Records</span><span class="value" id="totalMonthlyPayments">—</span></article>
+          <article class="card metric-card"><span class="label">Additional Fee Payment Records</span><span class="value" id="totalAdditionalPayments">—</span></article>
+        </section>
+
+        <section class="grid backup-options" aria-label="Backup options">
+          <article class="card backup-option">
+            <p class="eyebrow">Annual Backup</p>
+            <h2>Export one year</h2>
+            <p>Includes members and monthly and additional-fee payment statuses for every zone.</p>
+            <label for="backupYear">Select Year</label>
+            <select id="backupYear" disabled></select>
+            <button class="btn btn-primary" id="downloadAnnual" type="button" disabled>Download Annual Backup</button>
+          </article>
+
+          <article class="card backup-option">
+            <p class="eyebrow">Complete Backup</p>
+            <h2>Export all years</h2>
+            <p>Includes all zones, members, treasurer assignments, settings, payment records, and financial summaries.</p>
+            <button class="btn btn-primary" id="downloadComplete" type="button" disabled>Download Complete Backup</button>
+          </article>
+        </section>
+
+        <section class="card backup-status-card" aria-labelledby="backupInfoHeading">
+          <h2 id="backupInfoHeading">Backup Information</h2>
+          <div class="table-wrap">
+            <table class="backup-info-table">
+              <tbody>
+                <tr><th scope="row">Date and Time Generated</th><td id="generatedAt">Not generated</td></tr>
+                <tr><th scope="row">Export Type</th><td id="exportType">—</td></tr>
+                <tr><th scope="row">Selected Year</th><td id="exportYear">—</td></tr>
+                <tr><th scope="row">Total Records Exported</th><td id="exportRecordCount">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="backup-message" id="backupMessage" role="status" aria-live="polite"></p>
+          <p class="backup-privacy">Backup files contain personal and financial information. Store them securely and share only with authorized people.</p>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/guard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="js/backup-export.js"></script>
+  </body>
+</html>
