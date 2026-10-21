@@ -59,6 +59,7 @@
     <script src="js/auth.js?v=20261018-3"></script>
     <script src="js/utils.js?v=20260925-1"></script>
     <script src="js/guard.js"></script>
+    <script src="js/treasurer-announcement-badge.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
         await window.TRMSAuth.ready();
@@ -87,11 +88,14 @@
               <li><a class="active" href="treasurer-payments.html">Payment Management</a></li>
               <li><a href="payment-records.html">Payment Records</a></li>
               <li><a href="reports.html">Reports</a></li>
+              <li><a href="backup-export.html">Backup &amp; Export</a></li>
+              <li><a href="announcements.html">Announcements</a></li>
             `
           : `
               <li><a href="treasurer-dashboard.html">Dashboard</a></li>
               <li><a href="treasurer-members.html">My Members</a></li>
               <li><a class="active" href="treasurer-payments.html">Payment Management</a></li>
+              <li><a href="treasurer-announcements.html">Announcements</a></li>
             `;
         const yearSelect = document.getElementById('yearSelect');
         const memberSearch = document.getElementById('memberSearch');

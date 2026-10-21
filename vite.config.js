@@ -17,6 +17,8 @@ const htmlPages = [
   'payment-records',
   'reports',
   'backup-export',
+  'announcements',
+  'treasurer-announcements',
   'treasurer-dashboard',
   'treasurer-members',
   'treasurer-payments',

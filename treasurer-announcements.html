@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Announcements | TRMS</title>
+    <link rel="icon" type="image/png" href="assets/logo.png" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body data-role="zone_treasurer" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Zone Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-brand" aria-label="TRMS brand">
+          <img class="sidebar-brand__img" src="assets/logo.png" alt="TRMS logo" />
+          <span class="sidebar-brand__text">TRMS</span>
+        </div>
+        <ul class="nav-list">
+          <li><a href="treasurer-dashboard.html">Dashboard</a></li>
+          <li><a href="treasurer-members.html">My Members</a></li>
+          <li><a href="treasurer-payments.html">Payment Management</a></li>
+          <li><a class="active" aria-current="page" href="treasurer-announcements.html">Announcements</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header">
+          <div>
+            <p class="eyebrow">For Zone Treasurers</p>
+            <h1>Announcements</h1>
+            <p>Updates from the Head Treasurer for your zone.</p>
+          </div>
+        </div>
+        <p id="treasurerAnnouncementStatus" class="announcement-feedback" role="status" aria-live="polite"></p>
+        <section id="treasurerAnnouncementList" class="announcement-card-grid" aria-label="Published announcements"></section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/guard.js"></script>
+    <script src="js/treasurer-announcement-badge.js"></script>
+    <script src="js/announcements.js"></script>
+  </body>
+</html>

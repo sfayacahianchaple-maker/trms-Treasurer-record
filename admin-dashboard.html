@@ -47,6 +47,21 @@
 
         <section class="grid metrics-grid" id="dashboardMetrics"></section>
 
+        <section class="card card-spaced-top admin-announcements-dashboard">
+          <div class="section-heading">
+            <h2>Announcements</h2>
+            <a class="btn btn-primary" href="announcements.html#announcementForm">Create Announcement</a>
+          </div>
+          <div class="grid metrics-grid announcement-metrics">
+            <article class="card metric-card"><span class="label">Total Announcements</span><span class="value" id="dashboardAnnouncementTotal">—</span></article>
+            <article class="card metric-card"><span class="label">Published Announcements</span><span class="value" id="dashboardAnnouncementPublished">—</span></article>
+            <article class="card metric-card"><span class="label">Draft Announcements</span><span class="value" id="dashboardAnnouncementDrafts">—</span></article>
+          </div>
+          <h3>Recent Announcements</h3>
+          <p id="recentAnnouncementsStatus" class="announcement-feedback" role="status" aria-live="polite"></p>
+          <ul id="recentAnnouncements" class="announcement-dashboard-list"></ul>
+        </section>
+
         <section class="card card-spaced-top">
           <h2>Zone Summary</h2>
           <div class="table-wrap">
@@ -72,6 +87,7 @@
     <script src="js/auth.js?v=20261018-3"></script>
     <script src="js/utils.js?v=20260925-1"></script>
     <script src="js/guard.js"></script>
+    <script src="js/admin-announcements-dashboard.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
         await window.TRMSAuth.ready();

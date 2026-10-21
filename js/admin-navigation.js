@@ -16,6 +16,18 @@ function groupAdminNavigation() {
     item.appendChild(link);
     navigation.appendChild(item);
   }
+  if (!navigation.querySelector('a[href="announcements.html"]')) {
+    const item = document.createElement('li');
+    const link = document.createElement('a');
+    link.href = 'announcements.html';
+    link.textContent = 'Announcements';
+    if (window.location.pathname.endsWith('/announcements.html')) {
+      link.className = 'active';
+      link.setAttribute('aria-current', 'page');
+    }
+    item.appendChild(link);
+    navigation.appendChild(item);
+  }
 
   const links = new Map([...navigation.querySelectorAll(':scope > li')]
     .map((item) => [item.querySelector('a')?.getAttribute('href'), item])
@@ -24,7 +36,7 @@ function groupAdminNavigation() {
 
   const groups = [
     { label: 'Overview', hrefs: ['admin-dashboard.html'] },
-    { label: 'Create', hrefs: ['create-zone.html', 'members.html', 'treasurers.html', 'monthly-due.html', 'additional-fees.html', 'wedding-fees.html'] },
+    { label: 'Create', hrefs: ['create-zone.html', 'members.html', 'treasurers.html', 'monthly-due.html', 'additional-fees.html', 'wedding-fees.html', 'announcements.html'] },
     { label: 'View', hrefs: ['zones.html', 'treasurer-payments.html'] },
     { label: 'Reports & Records', hrefs: ['payment-records.html', 'reports.html', 'archives.html', 'backup-export.html'] }
   ];

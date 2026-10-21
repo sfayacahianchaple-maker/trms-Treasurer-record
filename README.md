@@ -20,6 +20,7 @@ TRMS is a membership and payment tracking system for zone treasurers and the hea
 - `treasurer-dashboard.html`: zone treasurer dashboard
 - `zones.html`, `members.html`, `treasurers.html`, `monthly-due.html`, `additional-fees.html`, `reports.html`: admin workflows
 - `backup-export.html`: admin-only annual and complete Excel backups
+- `announcements.html`, `treasurer-announcements.html`: admin announcements and zone-treasurer announcements
 - `zone-members.html`: payment and member table view for a zone
 - `css/style.css`: shared styling
 - `js/*.js`: app logic and page behaviors
@@ -34,8 +35,9 @@ The Head Treasurer can open **Backup & Export** from the Admin Dashboard to down
 1. Create a Supabase project.
 2. Copy your real project URL and anon key to `js/config.js`.
 3. Run the SQL in `supabase/schema.sql` in the Supabase SQL editor.
-4. Open `login.html` in a browser or serve the folder with a static server.
-5. Do not use the demo seed data or testing credentials. Use only your real Supabase users and profiles.
+4. Run `supabase/announcements.sql` in the Supabase SQL editor to create the announcements table and role-based policies.
+5. Open `login.html` in a browser or serve the folder with a static server.
+6. Do not use the demo seed data or testing credentials. Use only your real Supabase users and profiles.
 
 Example:
 

@@ -275,7 +275,7 @@
     }));
   }
 
-  async function verifyAdminBackupAccess() {
+  async function verifyAdminAccess() {
     const client = await ensureSupabaseClient();
     if (!client) {
       throw new Error('Supabase is not configured.');
@@ -296,14 +296,14 @@
       throw new Error(`Unable to verify administrator access: ${profileError.message}`);
     }
     if (profile?.role !== 'admin') {
-      throw new Error('Only the Head Treasurer can download backups.');
+      throw new Error('Only the Head Treasurer can access this page.');
     }
 
     return client;
   }
 
   async function getAdminBackupSummary() {
-    const client = await verifyAdminBackupAccess();
+    const client = await verifyAdminAccess();
     const tables = [
       ['members', 'members'],
       ['zones', 'zones'],
@@ -324,7 +324,7 @@
     if (exportType !== 'annual' && exportType !== 'complete') {
       throw new Error('Unsupported backup type.');
     }
-    const client = await verifyAdminBackupAccess();
+    const client = await verifyAdminAccess();
     const tables = [
       { key: 'zones', table: 'zones', columns: 'id, name, description, treasurer_id, created_at' },
       { key: 'members', table: 'members', columns: 'id, zone_id, name, address, phone, start_year, is_active, archived_at, created_at' },
@@ -367,6 +367,143 @@
     }
 
     return backup;
+  }
+
+  async function getAdminAnnouncementZones() {
+    const client = await verifyAdminAccess();
+    const { data, error } = await client
+      .from('zones')
+      .select('id, name')
+      .order('name', { ascending: true });
+    if (error) {
+      throw new Error(`Unable to load announcement zones: ${error.message}`);
+    }
+    return data || [];
+  }
+
+  async function getAdminAnnouncements() {
+    const client = await verifyAdminAccess();
+    const announcements = [];
+    const pageSize = 500;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await client
+        .from('announcements')
+        .select('id, title, category, description, target_audience, zone_id, status, is_pinned, created_by, created_at, updated_at, published_at, expires_at')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(offset, offset + pageSize - 1);
+      if (error) {
+        throw new Error(`Unable to load announcements: ${error.message}`);
+      }
+      announcements.push(...(data || []));
+      if (!data || data.length < pageSize) break;
+    }
+    return announcements;
+  }
+
+  async function getTreasurerAnnouncements() {
+    const client = await ensureSupabaseClient();
+    if (!client) {
+      throw new Error('Supabase is not configured.');
+    }
+    const { data: authData, error: authError } = await client.auth.getUser();
+    if (authError || !authData.user) {
+      throw new Error('A valid Supabase session is required.');
+    }
+    const { data: profile, error: profileError } = await client
+      .from('profiles')
+      .select('role')
+      .eq('id', authData.user.id)
+      .maybeSingle();
+    if (profileError) {
+      throw new Error(`Unable to verify treasurer access: ${profileError.message}`);
+    }
+    if (profile?.role !== 'zone_treasurer') {
+      throw new Error('Only Zone Treasurers can view this page.');
+    }
+
+    const announcements = [];
+    const pageSize = 500;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await client
+        .from('announcements')
+        .select('id, title, category, description, target_audience, zone_id, zone:zones(name), is_pinned, created_at, updated_at, published_at, expires_at')
+        .eq('status', 'published')
+        .or(`expires_at.is.null,expires_at.gte.${new Date().toISOString()}`)
+        .order('published_at', { ascending: false })
+        .order('is_pinned', { ascending: false })
+        .order('id', { ascending: false })
+        .range(offset, offset + pageSize - 1);
+      if (error) {
+        throw new Error(`Unable to load announcements: ${error.message}`);
+      }
+      announcements.push(...(data || []));
+      if (!data || data.length < pageSize) break;
+    }
+    return announcements;
+  }
+
+  async function saveAnnouncement(announcement) {
+    const client = await verifyAdminAccess();
+    const fields = {
+      title: String(announcement.title || '').trim(),
+      category: announcement.category,
+      description: String(announcement.description || '').trim(),
+      target_audience: announcement.target_audience,
+      zone_id: announcement.target_audience === 'specific_zone' ? Number(announcement.zone_id) : null,
+      status: announcement.status,
+      is_pinned: announcement.is_pinned === true,
+      expires_at: announcement.expires_at || null
+    };
+    if (!fields.title || !fields.description) {
+      throw new Error('Title and description are required.');
+    }
+    if (!['General', 'Monthly Dues', 'Additional Fees', 'Chapel Meeting', 'Chapel Activity', 'Emergency'].includes(fields.category)) {
+      throw new Error('Choose a valid announcement category.');
+    }
+    if (!['all_zone_treasurers', 'specific_zone'].includes(fields.target_audience)) {
+      throw new Error('Choose a valid target audience.');
+    }
+    if (fields.target_audience === 'specific_zone' && (!Number.isInteger(fields.zone_id) || fields.zone_id <= 0)) {
+      throw new Error('Choose a zone for this announcement.');
+    }
+    if (!['draft', 'published'].includes(fields.status)) {
+      throw new Error('Choose a valid publication status.');
+    }
+
+    if (announcement.id) {
+      const { data, error } = await client
+        .from('announcements')
+        .update(fields)
+        .eq('id', announcement.id)
+        .select('id')
+        .single();
+      if (error) {
+        throw new Error(`Unable to update announcement: ${error.message}`);
+      }
+      return data;
+    }
+
+    const { data, error } = await client
+      .from('announcements')
+      .insert(fields)
+      .select('id')
+      .single();
+    if (error) {
+      throw new Error(`Unable to create announcement: ${error.message}`);
+    }
+    return data;
+  }
+
+  async function deleteAnnouncement(announcementId) {
+    const client = await verifyAdminAccess();
+    const { error } = await client
+      .from('announcements')
+      .delete()
+      .eq('id', announcementId);
+    if (error) {
+      throw new Error(`Unable to delete announcement: ${error.message}`);
+    }
   }
 
   async function createMember(member) {
@@ -831,6 +968,11 @@
     resetMockData,
     getAdminBackupData,
     getAdminBackupSummary,
+    getAdminAnnouncementZones,
+    getAdminAnnouncements,
+    getTreasurerAnnouncements,
+    saveAnnouncement,
+    deleteAnnouncement,
     login,
     logout,
     hasAuthSession,

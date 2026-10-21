@@ -26,6 +26,7 @@
           <li><a class="active" href="treasurer-dashboard.html">Dashboard</a></li>
           <li><a href="treasurer-members.html">My Members</a></li>
           <li><a href="treasurer-payments.html">Payment Management</a></li>
+          <li><a href="treasurer-announcements.html">Announcements</a></li>
         </ul>
       </aside>
 
@@ -44,6 +45,15 @@
 
           <div class="metrics-grid grid" id="treasurerMetrics"></div>
         </section>
+
+        <section class="card card-spaced-top">
+          <div class="section-heading">
+            <h2>Recent Announcements</h2>
+            <a class="btn btn-secondary" href="treasurer-announcements.html">View All</a>
+          </div>
+          <p id="dashboardTreasurerAnnouncementsStatus" class="announcement-feedback" role="status" aria-live="polite"></p>
+          <ul id="dashboardTreasurerAnnouncements" class="announcement-dashboard-list"></ul>
+        </section>
       </main>
     </div>
 
@@ -51,6 +61,8 @@
     <script src="js/auth.js?v=20261018-3"></script>
     <script src="js/utils.js?v=20260925-1"></script>
     <script src="js/guard.js"></script>
+    <script src="js/treasurer-announcement-badge.js"></script>
+    <script src="js/treasurer-announcements-dashboard.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
         await window.TRMSAuth.ready();

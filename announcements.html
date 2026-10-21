@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Announcements | TRMS Admin</title>
+    <link rel="icon" type="image/png" href="assets/logo.png" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/admin-navigation.js" defer></script>
+  </head>
+  <body data-role="admin" class="app-shell">
+    <header class="topbar">
+      <div class="brand">TRMS</div>
+      <div class="topbar-meta">
+        <span class="user-chip" data-user-name>Head Treasurer</span>
+        <button class="btn btn-secondary" data-logout>Logout</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-brand" aria-label="TRMS brand">
+          <img class="sidebar-brand__img" src="assets/logo.png" alt="TRMS logo" />
+          <span class="sidebar-brand__text">TRMS</span>
+        </div>
+        <ul class="nav-list">
+          <li><a href="admin-dashboard.html">Dashboard</a></li>
+          <li><a href="zones.html">Zone List</a></li>
+          <li><a href="create-zone.html">Create Zone</a></li>
+          <li><a href="members.html">Members</a></li>
+          <li><a href="archives.html">Archives</a></li>
+          <li><a href="treasurers.html">Zone Treasurers</a></li>
+          <li><a href="monthly-due.html">Monthly Due</a></li>
+          <li><a href="additional-fees.html">Additional Fees</a></li>
+          <li><a href="wedding-fees.html">Wedding Fees</a></li>
+          <li><a href="treasurer-payments.html">Payment Management</a></li>
+          <li><a href="payment-records.html">Payment Records</a></li>
+          <li><a href="reports.html">Reports</a></li>
+          <li><a href="backup-export.html">Backup &amp; Export</a></li>
+          <li><a class="active" aria-current="page" href="announcements.html">Announcements</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <div class="page-header page-header--split">
+          <div>
+            <p class="eyebrow">Communications</p>
+            <h1>Announcements</h1>
+          </div>
+        </div>
+
+        <section class="grid metrics-grid announcement-metrics" aria-label="Announcement totals">
+          <article class="card metric-card"><span class="label">Total Announcements</span><span class="value" id="totalAnnouncements">—</span></article>
+          <article class="card metric-card"><span class="label">Published</span><span class="value" id="publishedAnnouncements">—</span></article>
+          <article class="card metric-card"><span class="label">Drafts</span><span class="value" id="draftAnnouncements">—</span></article>
+        </section>
+
+        <section class="card announcement-form-card" id="announcementFormSection">
+          <div class="section-heading">
+            <h2 id="formHeading">Create Announcement</h2>
+            <button class="btn btn-secondary" id="cancelEdit" type="button" hidden>Cancel Edit</button>
+          </div>
+          <form id="announcementForm" class="form-grid">
+            <input id="announcementId" type="hidden" />
+            <div class="form-control">
+              <label for="announcementTitle">Title</label>
+              <input id="announcementTitle" type="text" maxlength="180" required />
+            </div>
+            <div class="form-control">
+              <label for="announcementCategory">Category</label>
+              <select id="announcementCategory" required>
+                <option value="General">General</option>
+                <option value="Monthly Dues">Monthly Dues</option>
+                <option value="Additional Fees">Additional Fees</option>
+                <option value="Chapel Meeting">Chapel Meeting</option>
+                <option value="Chapel Activity">Chapel Activity</option>
+                <option value="Emergency">Emergency</option>
+              </select>
+            </div>
+            <div class="form-control form-control--wide">
+              <label for="announcementDescription">Description</label>
+              <textarea id="announcementDescription" rows="5" maxlength="10000" required></textarea>
+            </div>
+            <div class="form-control">
+              <label for="announcementAudience">Target Audience</label>
+              <select id="announcementAudience" required>
+                <option value="all_zone_treasurers">All Zone Treasurers</option>
+                <option value="specific_zone">Specific Zone</option>
+              </select>
+            </div>
+            <div class="form-control" id="announcementZoneControl" hidden>
+              <label for="announcementZone">Zone</label>
+              <select id="announcementZone"></select>
+            </div>
+            <div class="form-control">
+              <label for="announcementExpiresAt">Expiration Date (optional)</label>
+              <input id="announcementExpiresAt" type="datetime-local" />
+            </div>
+            <div class="form-control">
+              <label for="announcementStatus">Status</label>
+              <select id="announcementStatus">
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+              </select>
+              <small>Publication date is generated automatically when an announcement is published.</small>
+            </div>
+            <div class="form-control announcement-pin-control">
+              <label class="checkbox-label" for="announcementPinned">
+                <input id="announcementPinned" type="checkbox" />
+                Pin this announcement
+              </label>
+            </div>
+            <div class="form-control form-control--wide announcement-form-actions">
+              <button class="btn btn-primary" id="saveAnnouncement" type="submit">Save Announcement</button>
+            </div>
+          </form>
+          <p id="announcementFormStatus" class="announcement-feedback" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="card announcement-history-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">History</p>
+              <h2>All Announcements</h2>
+            </div>
+            <button class="btn btn-secondary" id="refreshAnnouncements" type="button">Refresh</button>
+          </div>
+          <p id="announcementListStatus" class="announcement-feedback" role="status" aria-live="polite"></p>
+          <div id="announcementList" class="announcement-admin-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/guard.js"></script>
+    <script src="js/announcements.js"></script>
+  </body>
+</html>
